@@ -269,18 +269,15 @@
     </div>
   </div>
 
-  <div class="panel">
-    <div class="seclabel"><span class="eyebrow">Result distribution</span></div>
-    <h2>Where you exit vs where price goes</h2>
-    <div class="help" style="margin:8px 0 4px">Share of all trades reaching each level — your actual exit (Trade Result) vs the best the market offered (Market Result).</div>
-    <div id="resultRadar"></div>
-  </div>
-
   <div class="grid2">
     <div class="panel">
       <div class="seclabel"><span class="eyebrow">News-relative</span></div>
-      <h2>WinRate by days from news</h2>
-      <div class="help" style="margin:8px 0 14px">Each trade is matched to the nearest red USD event and bucketed by (trade day − news day). 0 = news day, + = after.</div>
+      <h2>By days from news</h2>
+      <div class="help" style="margin:8px 0 10px">Days between each trade and the nearest core USD event (CPI / PPI / FOMC / NFP). “Days to next” counts forward to the upcoming event; “Days since” counts back from the last one.</div>
+      <div class="pillrow" id="timeMode" style="justify-content:flex-start;margin:0 0 14px">
+        <button data-m="next" class="on">Days to next</button>
+        <button data-m="since">Days since</button>
+      </div>
       <div class="chart" id="timingChart"></div>
     </div>
     <div class="panel">
@@ -305,6 +302,13 @@
     <h2>Was trailing worth it?</h2>
     <div class="help" style="margin:8px 0 6px">Only trades where <b>Trail Reason</b> is filled. Compares your exit (Trade Result) vs how far price went (Market Result), ranked Full TP &gt; TP3 &gt; TP2 &gt; TP1 &gt; BE &gt; SL. If the market went further than your exit, trailing cut you short → that trade is a “shouldn't have trailed”.</div>
     <div class="chart" id="trailChart"></div>
+  </div>
+
+  <div class="panel">
+    <div class="seclabel"><span class="eyebrow">Result distribution</span></div>
+    <h2>Where you exit vs where price goes</h2>
+    <div class="help" style="margin:8px 0 4px">Share of all trades reaching each level — your actual exit (Trade Result) vs the best the market offered (Market Result).</div>
+    <div id="resultRadar"></div>
   </div>
 
 </div>
@@ -441,10 +445,11 @@ function barRows(items,metric,keepOrder){
       +`<div class="btrack">${fill}</div><div class="bv ${pos?'pos':'neg'}">${valTxt}</div></div>`;
   }).join('');
 }
-function nearestUsd(t){const evs=usdHigh(),tz=jtz();let best=null,ba=99;
-  for(const e of evs){const off=t.di-newsDi(e.date,tz);if(Math.abs(off)<=7&&Math.abs(off)<ba){ba=Math.abs(off);best=off;}}
-  return best;}
-const DAYB=[[-3,'3 days before'],[-2,'2 days before'],[-1,'1 day before'],[0,'News day'],[1,'1 day after'],[2,'2 days after'],[3,'3 days after']];
+function offToNext(t){const tz=jtz();let best=null;for(const e of usdHigh()){const d=newsDi(e.date,tz)-t.di;if(d>=0&&(best==null||d<best))best=d;}return best;}
+function offSince(t){const tz=jtz();let best=null;for(const e of usdHigh()){const d=t.di-newsDi(e.date,tz);if(d>=0&&(best==null||d<best))best=d;}return best;}
+const TIMEORDER=['0 days','1 day','2 days','3 days','4–7 days','8–14 days','>14 days'];
+function timeBucket(o){if(o==null)return '>14 days';if(o===0)return '0 days';if(o===1)return '1 day';if(o===2)return '2 days';if(o===3)return '3 days';if(o<=7)return '4–7 days';if(o<=14)return '8–14 days';return '>14 days';}
+let TIMEMODE='next';
 function rowOut(tb,label,a,d0,showDays){const tr=document.createElement('tr');const win=a.winAll==null?'—':(a.winAll*100).toFixed(0)+'%';
   tr.innerHTML=`<td class="bucket${d0?' d0':''}">${label}</td>${showDays?`<td>${a.days}</td>`:''}<td>${a.n}</td><td>${win}</td>
    <td class="${rcls(a.avgR)}">${a.n?a.avgR.toFixed(2):'—'}</td><td class="${rcls(a.sumR)}">${a.sumR>=0?'+':''}${a.sumR.toFixed(1)}</td>`;tb.appendChild(tr);}
@@ -460,10 +465,10 @@ function filteredTrades(){
 function updateRangeCount(){const el=$('#rangeCount');if(!el)return;const n=filteredTrades().length;
   el.textContent=RANGE.mode==='all'?`${n} trades (all)`:`${n} trades in range`;}
 function renderFiltered(){renderCal();renderTiming();renderTOD();renderFactor();renderResultRadar();renderTrail();}
-function renderTiming(){const FT=filteredTrades();const map=FT.map(t=>({t,off:nearestUsd(t)}));const used=new Set();
-  const items=DAYB.map(([off,lbl])=>{const l=map.filter(x=>x.off===off).map(x=>x.t);l.forEach(t=>used.add(t));return aggItem(lbl,l);});
-  items.push(aggItem('>3 days / none',FT.filter(t=>!used.has(t))));
-  $('#timingChart').innerHTML=barRows(items,METRIC,true);}
+function renderTiming(){const FT=filteredTrades();const offFn=TIMEMODE==='since'?offSince:offToNext;
+  const g={};TIMEORDER.forEach(l=>g[l]=[]);
+  FT.forEach(t=>{g[timeBucket(offFn(t))].push(t);});
+  $('#timingChart').innerHTML=barRows(TIMEORDER.map(l=>aggItem(l,g[l])),METRIC,true);}
 function renderSession(){const g={};TRADES.forEach(t=>{(g[t.session]=g[t.session]||[]).push(t);});
   const items=Object.entries(g).sort((a,b)=>b[1].length-a[1].length).map(([k,l])=>aggItem(k,l));
   $('#sessChart').innerHTML=barRows(items);}
@@ -579,7 +584,7 @@ function buildFactorButtons(){
     if(numeric/vals.length>0.7)continue;
     cols.push({idx:c,name,disp:FX_RENAME[fxKey(name)]||name});}
   if(FACTORIDX==null||!cols.some(o=>String(o.idx)===String(FACTORIDX))){
-    const def=cols.find(o=>/setup violation|^type$|entry|choch/i.test(o.name))||cols[0];
+    const def=cols.find(o=>/^session$/i.test(o.name))||cols.find(o=>/setup violation|^type$|entry|choch/i.test(o.name))||cols[0];
     FACTORIDX=def?def.idx:null;}
   const byKey={};cols.forEach(o=>byKey[fxKey(o.name)]=o);
   const used=new Set();
@@ -750,6 +755,9 @@ $('#rangeSel').onchange=e=>{RANGE.mode=e.target.value;
   if(RANGE.mode==='custom'&&!RANGE.start){const dis=TRADES.map(t=>t.di);if(dis.length){RANGE.start=diToDate(Math.min(...dis));RANGE.end=diToDate(Math.max(...dis));$('#rangeFrom').value=RANGE.start;$('#rangeTo').value=RANGE.end;}}
   renderFiltered();};
 $('#rangeFrom').onchange=e=>{RANGE.start=e.target.value;renderFiltered();};
+document.addEventListener('click',e=>{const b=e.target.closest('#timeMode button');if(!b)return;
+  TIMEMODE=b.dataset.m;document.querySelectorAll('#timeMode button').forEach(x=>x.classList.toggle('on',x.dataset.m===TIMEMODE));
+  renderTiming();});
 $('#rangeTo').onchange=e=>{RANGE.end=e.target.value;renderFiltered();};
 $('#refresh').onclick=loadAll;
 $('#prevM').onclick=()=>{monthCursor=new Date(monthCursor.getFullYear(),monthCursor.getMonth()-1,1);renderCal();};
