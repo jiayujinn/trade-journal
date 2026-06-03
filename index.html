@@ -311,7 +311,7 @@
   <div class="panel">
     <div class="seclabel"><span class="eyebrow">Should I trail?</span></div>
     <h2>Was trailing worth it?</h2>
-    <div class="help" style="margin:8px 0 6px">Only trades where <b>Trail Reason</b> is filled. Compares your exit (Trade Result) vs how far price went (Market Result), ranked Full TP &gt; TP3 &gt; TP2 &gt; TP1 &gt; BE &gt; SL. If the market went further than your exit, trailing cut you short → that trade is a “shouldn't have trailed”.</div>
+    <div class="help" style="margin:8px 0 6px">Only trades where <b>Trail Reason</b> is filled. Compares your exit (Trade Result) vs how far price went (Market Result), ranked Full TP &gt; TP3 &gt; TP2 &gt; TP1 &gt; BE &gt; Trail SL &gt; SL. If the market went further than your exit, trailing cut you short → that trade is a “shouldn't have trailed”.</div>
     <div class="chart" id="trailChart"></div>
   </div>
 
@@ -636,7 +636,7 @@ function renderFactor(){
   $('#factorChart').innerHTML=barRows(Object.entries(g).map(([k,l])=>aggItem(k,l)));
 }
 function resRank(s){s=cellTxt(s).toLowerCase();if(!s)return null;
-  if(/full/.test(s))return 5;if(/tp\s*3/.test(s))return 4;if(/tp\s*2/.test(s))return 3;if(/tp\s*1/.test(s))return 2;if(/\bbe\b|break/.test(s))return 1;if(/\bsl\b|stop/.test(s))return 0;return null;}
+  if(/full/.test(s))return 6;if(/tp\s*3/.test(s))return 5;if(/tp\s*2/.test(s))return 4;if(/tp\s*1/.test(s))return 3;if(/\bbe\b|break/.test(s))return 2;if(/trail|\btsl\b/.test(s))return 1;if(/\bsl\b|stop/.test(s))return 0;return null;}
 function renderTrail(){
   const box=$('#trailChart');if(!box)return;
   const g={};filteredTrades().forEach(t=>{splitTags(t.row[COL.trail]).forEach(k=>{if(k==='(blank)')return;(g[k]=g[k]||[]).push(t);});});
@@ -657,14 +657,14 @@ function renderTrail(){
 function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 function renderResultRadar(){
   const box=$('#resultRadar');if(!box)return;
-  const CATS=['SL','BE','TP1','TP2','TP3','Full TP'];
+  const CATS=['SL','Trail SL','BE','TP1','TP2','TP3','Full TP'];
   const tr=CATS.map(()=>0),mk=CATS.map(()=>0);let tot=0;
   filteredTrades().forEach(t=>{const a=resRank(t.row[COL.result]),b=resRank(t.row[COL.mkt]);
     if(a!=null||b!=null)tot++;if(a!=null)tr[a]++;if(b!=null)mk[b]++;});
   if(!tot){box.innerHTML='<div class="help" style="color:var(--faint)">No Trade/Market Result data.</div>';return;}
   const trF=tr.map(v=>v/tot),mkF=mk.map(v=>v/tot);
   const mx=Math.max(.0001,...trF,...mkF);
-  const cx=210,cy=158,rad=112,N=6;
+  const cx=210,cy=158,rad=112,N=CATS.length;
   const ang=i=>-Math.PI/2+i*2*Math.PI/N;
   const pt=(i,r)=>[cx+Math.cos(ang(i))*r,cy+Math.sin(ang(i))*r];
   const poly=fr=>fr.map((v,i)=>{const[px,py]=pt(i,v/mx*rad);return `${px.toFixed(1)},${py.toFixed(1)}`;}).join(' ');
