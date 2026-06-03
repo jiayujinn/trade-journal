@@ -581,7 +581,7 @@ function buildFactorButtons(){
   const box=$('#factorBtns');if(!box)return;
   const maxc=Math.max(0,...TRADES.map(t=>t.row.length));const cols=[];
   for(let c=0;c<maxc;c++){const name=cellTxt(HEADERS[c]);
-    const isSize=(c===20),isReg=(!!name&&/^regi/i.test(fxKey(name))),force=isSize||isReg;
+    const isSize=(c===20),isReg=(c===17),force=isSize||isReg;
     if(!name&&!force)continue;
     const vals=TRADES.map(t=>cellTxt(t.row[c])).filter(Boolean);
     if(!force){
@@ -624,7 +624,7 @@ function fxVal(col,v){
   return v;
 }
 function renderFactor(){
-  if(FACTORIDX==null)return;const idx=+FACTORIDX,g={},cn=cellTxt(HEADERS[idx]);
+  if(FACTORIDX==null)return;const idx=+FACTORIDX,g={},cn=idx===17?'regime':(idx===20?'size':cellTxt(HEADERS[idx]));
   filteredTrades().forEach(t=>{new Set(splitTags(t.row[idx])).forEach(tag=>{const lab=fxVal(cn,tag);(g[lab]=g[lab]||[]).push(t);});});
   $('#factorChart').innerHTML=barRows(Object.entries(g).map(([k,l])=>aggItem(k,l)));
 }
