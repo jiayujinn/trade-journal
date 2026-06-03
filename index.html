@@ -51,9 +51,11 @@
   .pillrow{display:flex;flex-wrap:wrap;justify-content:center;gap:5px}
   .pillrow button,#factorBtns button{padding:5px 9px;font-size:10px;border-radius:999px;white-space:nowrap;flex:0 0 auto}
   .pillrow button.on,#factorBtns button.on{background:var(--accent);color:#1c1402;border-color:var(--accent)}
+  #factorBtns{display:flex;flex-direction:column;gap:6px}
   .pillpair{display:flex;justify-content:center;align-items:center;gap:8px;flex-wrap:wrap}
   .pgrp{display:flex;flex-wrap:wrap;gap:5px}
   .psep{color:var(--faint);font-family:var(--mono);font-size:14px;padding:0 2px}
+  @media(max-width:560px){#factorBtns{flex-direction:row;flex-wrap:wrap;justify-content:center;gap:5px}.pillpair,.pgrp{display:contents}.psep{display:none}}
   .navR{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
   .navR select,.navR input[type=date]{background:#0d0c0b;border:1px solid var(--border2);color:var(--text);border-radius:7px;padding:5px 8px;font-size:9.5px;font-family:var(--mono);color-scheme:dark}
   .navR .rdash{color:var(--faint)}
@@ -293,7 +295,7 @@
     <h2>Break down by any column</h2>
     <div class="help" style="margin:8px 0 12px">Pick any of your setup columns. Multi-value cells (e.g. “h1 FVG, h4 FVG”) are split — each value is counted on its own, so totals can overlap.</div>
     <div class="eyebrow" style="color:var(--muted);margin-bottom:7px">Group by</div>
-    <div id="factorBtns" style="margin-bottom:14px;display:flex;flex-direction:column;gap:6px"></div>
+    <div id="factorBtns" style="margin-bottom:14px"></div>
     <div class="chart" id="factorChart"></div>
   </div>
 
