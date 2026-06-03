@@ -54,6 +54,9 @@
   .pillpair{display:flex;justify-content:center;align-items:center;gap:8px;flex-wrap:wrap}
   .pgrp{display:flex;flex-wrap:wrap;gap:5px}
   .psep{color:var(--faint);font-family:var(--mono);font-size:14px;padding:0 2px}
+  .navR{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .navR select,.navR input[type=date]{background:#0d0c0b;border:1px solid var(--border2);color:var(--text);border-radius:7px;padding:5px 8px;font-size:9.5px;font-family:var(--mono);color-scheme:dark}
+  .navR .rdash{color:var(--faint)}
   #refresh,#cfgToggle{padding:5px 10px;font-size:9.5px}
   .icells{white-space:nowrap;text-align:right}
   .ic{position:relative;display:inline-block;margin-left:7px;cursor:default;font-size:13px;opacity:.6}
@@ -226,6 +229,19 @@
         <button id="nextM">›</button>
         <button id="todayBtn">Today</button>
       </div>
+      <div class="navR">
+        <select id="rangeSel">
+          <option value="all">All history</option>
+          <option value="7">Last 7 days</option>
+          <option value="30">Last 30 days</option>
+          <option value="90">Last 90 days</option>
+          <option value="365">Last 365 days</option>
+          <option value="custom">Custom…</option>
+        </select>
+        <span id="rangeCustom" style="display:none;align-items:center;gap:6px">
+          <input type="date" id="rangeFrom"><span class="rdash">–</span><input type="date" id="rangeTo">
+        </span>
+      </div>
     </div>
     <div class="wdhead"><span>Mo</span><span>Tu</span><span>We</span><span>Th</span><span>Fr</span><span>Sa</span><span>Su</span><span>Wk</span></div>
     <div class="cal" id="cal"></div>
@@ -307,6 +323,7 @@ function newsDi(d,tz){const[y,m,dd]=ymd(d,tz);return Math.floor(Date.UTC(y,m-1,d
 function hhmm(d,tz){return new Intl.DateTimeFormat('zh-Hant',{timeZone:tz,hour:'2-digit',minute:'2-digit',hour12:false}).format(d);}
 
 let EVENTS=[],HIST=[],TRADES=[],HEADERS=[],RAWROWS=[],NEWSDIAG='',JDIAG='',LOCALDIAG='';
+let RANGE={mode:'all',start:'',end:''};
 let monthCursor=(()=>{const d=new Date();return new Date(d.getFullYear(),d.getMonth(),1);})();
 const $=s=>document.querySelector(s);
 const setStatus=(m,c='')=>{const s=$('#status');s.textContent=m;s.className='status '+c;};
@@ -417,9 +434,21 @@ const DAYB=[[-3,'3 days before'],[-2,'2 days before'],[-1,'1 day before'],[0,'Ne
 function rowOut(tb,label,a,d0,showDays){const tr=document.createElement('tr');const win=a.winAll==null?'—':(a.winAll*100).toFixed(0)+'%';
   tr.innerHTML=`<td class="bucket${d0?' d0':''}">${label}</td>${showDays?`<td>${a.days}</td>`:''}<td>${a.n}</td><td>${win}</td>
    <td class="${rcls(a.avgR)}">${a.n?a.avgR.toFixed(2):'—'}</td><td class="${rcls(a.sumR)}">${a.sumR>=0?'+':''}${a.sumR.toFixed(1)}</td>`;tb.appendChild(tr);}
-function renderTiming(){const map=TRADES.map(t=>({t,off:nearestUsd(t)}));const used=new Set();
+function dateToDi(s){const m=/(\d{4})-(\d{2})-(\d{2})/.exec(s||'');if(!m)return null;return Math.floor(Date.UTC(+m[1],+m[2]-1,+m[3])/864e5);}
+function diToDate(di){return new Date(di*864e5).toISOString().slice(0,10);}
+function filteredTrades(){
+  if(RANGE.mode==='all')return TRADES;
+  let lo=-Infinity,hi=Infinity;
+  if(RANGE.mode==='custom'){const a=dateToDi(RANGE.start),b=dateToDi(RANGE.end);if(a!=null)lo=a;if(b!=null)hi=b;}
+  else{const n=+RANGE.mode;const today=Math.floor(Date.now()/864e5);lo=today-n+1;hi=today;}
+  return TRADES.filter(t=>t.di>=lo&&t.di<=hi);
+}
+function updateRangeCount(){const el=$('#rangeCount');if(!el)return;const n=filteredTrades().length;
+  el.textContent=RANGE.mode==='all'?`${n} trades (all)`:`${n} trades in range`;}
+function renderFiltered(){renderCal();renderTiming();renderTOD();renderFactor();renderResultRadar();renderTrail();}
+function renderTiming(){const FT=filteredTrades();const map=FT.map(t=>({t,off:nearestUsd(t)}));const used=new Set();
   const items=DAYB.map(([off,lbl])=>{const l=map.filter(x=>x.off===off).map(x=>x.t);l.forEach(t=>used.add(t));return aggItem(lbl,l);});
-  items.push(aggItem('>3 days / none',TRADES.filter(t=>!used.has(t))));
+  items.push(aggItem('>3 days / none',FT.filter(t=>!used.has(t))));
   $('#timingChart').innerHTML=barRows(items,METRIC,true);}
 function renderSession(){const g={};TRADES.forEach(t=>{(g[t.session]=g[t.session]||[]).push(t);});
   const items=Object.entries(g).sort((a,b)=>b[1].length-a[1].length).map(([k,l])=>aggItem(k,l));
@@ -493,7 +522,7 @@ function renderDir(){const g={Long:[],Short:[]};
   TRADES.forEach(t=>{const d=/long/i.test(t.dir)?'Long':/short/i.test(t.dir)?'Short':null;if(d)g[d].push(t);});
   $('#dirChart').innerHTML=barRows([aggItem('Long',g.Long),aggItem('Short',g.Short)]);}
 const TOD=[[0,510,'before 8:30'],[510,530,'8:30–8:50'],[530,550,'8:50–9:10'],[550,590,'9:10–9:50'],[590,610,'9:50–10:10'],[610,650,'10:10–10:50'],[650,670,'10:50–11:10'],[670,1440,'after 11:10']];
-function renderTOD(){$('#todChart').innerHTML=barRows(TOD.map(([a,b,lbl])=>aggItem(lbl,TRADES.filter(t=>t.tmin>=a&&t.tmin<b))),METRIC,true);}
+function renderTOD(){const FT=filteredTrades();$('#todChart').innerHTML=barRows(TOD.map(([a,b,lbl])=>aggItem(lbl,FT.filter(t=>t.tmin>=a&&t.tmin<b))),METRIC,true);}
 
 // ── violations & factor explorer ──
 function cellTxt(x){return String(x==null?'':x).replace(/\u200b/g,'').trim();}
@@ -550,14 +579,14 @@ function buildFactorButtons(){
 }
 function renderFactor(){
   if(FACTORIDX==null)return;const idx=+FACTORIDX,g={};
-  TRADES.forEach(t=>{new Set(splitTags(t.row[idx])).forEach(tag=>{(g[tag]=g[tag]||[]).push(t);});});
+  filteredTrades().forEach(t=>{new Set(splitTags(t.row[idx])).forEach(tag=>{(g[tag]=g[tag]||[]).push(t);});});
   $('#factorChart').innerHTML=barRows(Object.entries(g).map(([k,l])=>aggItem(k,l)));
 }
 function resRank(s){s=cellTxt(s).toLowerCase();if(!s)return null;
   if(/full/.test(s))return 5;if(/tp\s*3/.test(s))return 4;if(/tp\s*2/.test(s))return 3;if(/tp\s*1/.test(s))return 2;if(/\bbe\b|break/.test(s))return 1;if(/\bsl\b|stop/.test(s))return 0;return null;}
 function renderTrail(){
   const box=$('#trailChart');if(!box)return;
-  const g={};TRADES.forEach(t=>{const k=cellTxt(t.row[COL.trail]);if(!k)return;(g[k]=g[k]||[]).push(t);});
+  const g={};filteredTrades().forEach(t=>{splitTags(t.row[COL.trail]).forEach(k=>{if(k==='(blank)')return;(g[k]=g[k]||[]).push(t);});});
   const rows=Object.entries(g).map(([k,l])=>{let yes=0,no=0,gap=0;
     l.forEach(t=>{const tr=resRank(t.row[COL.result]),mk=resRank(t.row[COL.mkt]);if(tr==null||mk==null)return;
       if(mk>tr){no++;gap+=mk-tr;}else yes++;});
@@ -577,7 +606,7 @@ function renderResultRadar(){
   const box=$('#resultRadar');if(!box)return;
   const CATS=['SL','BE','TP1','TP2','TP3','Full TP'];
   const tr=CATS.map(()=>0),mk=CATS.map(()=>0);let tot=0;
-  TRADES.forEach(t=>{const a=resRank(t.row[COL.result]),b=resRank(t.row[COL.mkt]);
+  filteredTrades().forEach(t=>{const a=resRank(t.row[COL.result]),b=resRank(t.row[COL.mkt]);
     if(a!=null||b!=null)tot++;if(a!=null)tr[a]++;if(b!=null)mk[b]++;});
   if(!tot){box.innerHTML='<div class="help" style="color:var(--faint)">No Trade/Market Result data.</div>';return;}
   const trF=tr.map(v=>v/tot),mkF=mk.map(v=>v/tot);
@@ -602,7 +631,7 @@ function renderResultRadar(){
 }
 
 // calendar
-function dayMeta(di){const trs=TRADES.filter(t=>t.di===di);const tz=jtz();const evs=usdHigh().filter(e=>newsDi(e.date,tz)===di);const evm=usdMed().filter(e=>newsDi(e.date,tz)===di);return{trs,evs,evm,a:agg(trs)};}
+function dayMeta(di){const trs=filteredTrades().filter(t=>t.di===di);const tz=jtz();const evs=usdHigh().filter(e=>newsDi(e.date,tz)===di);const evm=usdMed().filter(e=>newsDi(e.date,tz)===di);return{trs,evs,evm,a:agg(trs)};}
 function tint(sumR,n){if(!n)return'';const a=Math.min(.30,.07+Math.abs(sumR)*.025);return sumR>0?`background:rgba(66,210,154,${a})`:sumR<0?`background:rgba(242,89,107,${a})`:'';}
 function renderCal(){
   const cal=$('#cal');cal.innerHTML='';
@@ -678,7 +707,7 @@ function openDay(di,day){
 }
 $('#overlay').onclick=e=>{if(e.target.id==='overlay')$('#overlay').classList.remove('on');};
 
-function renderAll(){renderStats();renderCal();renderTiming();renderTOD();buildFactorButtons();renderFactor();renderResultRadar();renderTrail();}
+function renderAll(){renderStats();buildFactorButtons();renderFiltered();}
 
 async function loadLocalFile(){
   try{
@@ -702,6 +731,12 @@ async function loadAll(){
   renderAll();
 }
 $('#cfgToggle').onclick=()=>{const c=$('#cfg');c.style.display=(c.style.display==='none'||!c.style.display)?'block':'none';};
+$('#rangeSel').onchange=e=>{RANGE.mode=e.target.value;
+  $('#rangeCustom').style.display=RANGE.mode==='custom'?'inline-flex':'none';
+  if(RANGE.mode==='custom'&&!RANGE.start){const dis=TRADES.map(t=>t.di);if(dis.length){RANGE.start=diToDate(Math.min(...dis));RANGE.end=diToDate(Math.max(...dis));$('#rangeFrom').value=RANGE.start;$('#rangeTo').value=RANGE.end;}}
+  renderFiltered();};
+$('#rangeFrom').onchange=e=>{RANGE.start=e.target.value;renderFiltered();};
+$('#rangeTo').onchange=e=>{RANGE.end=e.target.value;renderFiltered();};
 $('#refresh').onclick=loadAll;
 $('#prevM').onclick=()=>{monthCursor=new Date(monthCursor.getFullYear(),monthCursor.getMonth()-1,1);renderCal();};
 $('#nextM').onclick=()=>{monthCursor=new Date(monthCursor.getFullYear(),monthCursor.getMonth()+1,1);renderCal();};
