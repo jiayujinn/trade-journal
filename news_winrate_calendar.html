@@ -479,7 +479,7 @@ function filteredTrades(){
 }
 function updateRangeCount(){const el=$('#rangeCount');if(!el)return;const n=filteredTrades().length;
   el.textContent=RANGE.mode==='all'?`${n} trades (all)`:`${n} trades in range`;}
-function renderFiltered(){renderCal();renderTiming();renderTOD();renderFactor();renderResultRadar();renderTrail();}
+function renderFiltered(){renderStats();renderCal();renderTiming();renderTOD();renderFactor();renderResultRadar();renderTrail();}
 function renderTiming(){const FT=filteredTrades();const offFn=TIMEMODE==='since'?offSince:offToNext;
   const g={};TIMEORDER.forEach(l=>g[l]=[]);
   FT.forEach(t=>{g[timeBucket(offFn(t))].push(t);});
@@ -544,13 +544,14 @@ const CARDS=[
   {k:'months',lab:'Months traded',v:(s,x)=>x.months,sub:()=>'distinct months'},
 ];
 function renderStats(){
-  const s=statBlock(TRADES),dt=dayTotals(TRADES),dv=Object.values(dt);
+  const FT=filteredTrades();
+  const s=statBlock(FT),dt=dayTotals(FT),dv=Object.values(dt);
   const x={best:dv.length?Math.max(...dv):0,worst:dv.length?Math.min(...dv):0,days:Object.keys(dt).length,
-    weeks:new Set(TRADES.map(t=>Math.floor((t.di+3)/7))).size,
-    months:new Set(TRADES.map(t=>{const d=new Date(t.di*864e5);return d.getUTCFullYear()*12+d.getUTCMonth();})).size};
+    weeks:new Set(FT.map(t=>Math.floor((t.di+3)/7))).size,
+    months:new Set(FT.map(t=>{const d=new Date(t.di*864e5);return d.getUTCFullYear()*12+d.getUTCMonth();})).size};
   $('#statCards').innerHTML=CARDS.map(c=>
     `<div class="stat"><div class="eyebrow">${c.lab}</div><div class="sv">${c.v(s,x)}</div><div class="ss">${c.sub(s,x)}</div></div>`).join('');
-  $('#equity').innerHTML=TRADES.length?equityCurve(TRADES):'<div class="help">No trades.</div>';
+  $('#equity').innerHTML=FT.length?equityCurve(FT):'<div class="help">No trades.</div>';
 }
 function renderDir(){const g={Long:[],Short:[]};
   TRADES.forEach(t=>{const d=/long/i.test(t.dir)?'Long':/short/i.test(t.dir)?'Short':null;if(d)g[d].push(t);});
@@ -766,7 +767,7 @@ function openDay(di,day){
 }
 $('#overlay').onclick=e=>{if(e.target.id==='overlay')$('#overlay').classList.remove('on');};
 
-function renderAll(){renderStats();buildFactorButtons();renderFiltered();}
+function renderAll(){buildFactorButtons();renderFiltered();}
 
 async function loadLocalFile(){
   try{
