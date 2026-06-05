@@ -265,8 +265,12 @@
           <option value="30">Last 30 days</option>
           <option value="90">Last 90 days</option>
           <option value="365">Last 365 days</option>
+          <option value="customdays">Last X days</option>
           <option value="custom">Custom…</option>
         </select>
+        <span id="rangeCustomDays" style="display:none;align-items:center;gap:6px">
+          Last <input type="number" id="rangeDays" min="1" value="14" style="width:60px"> days
+        </span>
         <span id="rangeCustom" style="display:none;align-items:center;gap:6px">
           <input type="date" id="rangeFrom"><span class="rdash">–</span><input type="date" id="rangeTo">
         </span>
@@ -356,7 +360,7 @@ function newsDi(d,tz){const[y,m,dd]=ymd(d,tz);return Math.floor(Date.UTC(y,m-1,d
 function hhmm(d,tz){return new Intl.DateTimeFormat('zh-Hant',{timeZone:tz,hour:'2-digit',minute:'2-digit',hour12:false}).format(d);}
 
 let EVENTS=[],HIST=[],TRADES=[],HEADERS=[],RAWROWS=[],NEWSDIAG='',JDIAG='',LOCALDIAG='';
-let RANGE={mode:'all',start:'',end:''};
+let RANGE={mode:'all',start:'',end:'',days:14};
 let monthCursor=(()=>{const d=new Date();return new Date(d.getFullYear(),d.getMonth(),1);})();
 const $=s=>document.querySelector(s);
 const setStatus=(m,c='')=>{const s=$('#status');s.textContent=m;s.className='status '+c;};
@@ -473,8 +477,10 @@ function diToDate(di){return new Date(di*864e5).toISOString().slice(0,10);}
 function filteredTrades(){
   if(RANGE.mode==='all')return TRADES;
   let lo=-Infinity,hi=Infinity;
+  const now=new Date();const today=Math.floor(Date.UTC(now.getFullYear(),now.getMonth(),now.getDate())/864e5);
   if(RANGE.mode==='custom'){const a=dateToDi(RANGE.start),b=dateToDi(RANGE.end);if(a!=null)lo=a;if(b!=null)hi=b;}
-  else{const n=+RANGE.mode;const today=Math.floor(Date.now()/864e5);lo=today-n+1;hi=today;}
+  else if(RANGE.mode==='customdays'){const n=Math.max(1,+RANGE.days||1);lo=today-n+1;hi=today;}
+  else{const n=+RANGE.mode;lo=today-n+1;hi=today;}
   return TRADES.filter(t=>t.di>=lo&&t.di<=hi);
 }
 function updateRangeCount(){const el=$('#rangeCount');if(!el)return;const n=filteredTrades().length;
@@ -793,8 +799,10 @@ async function loadAll(){
 $('#cfgToggle').onclick=()=>{const c=$('#cfg');c.style.display=(c.style.display==='none'||!c.style.display)?'block':'none';};
 $('#rangeSel').onchange=e=>{RANGE.mode=e.target.value;
   $('#rangeCustom').style.display=RANGE.mode==='custom'?'inline-flex':'none';
+  $('#rangeCustomDays').style.display=RANGE.mode==='customdays'?'inline-flex':'none';
   if(RANGE.mode==='custom'&&!RANGE.start){const dis=TRADES.map(t=>t.di);if(dis.length){RANGE.start=diToDate(Math.min(...dis));RANGE.end=diToDate(Math.max(...dis));$('#rangeFrom').value=RANGE.start;$('#rangeTo').value=RANGE.end;}}
   renderFiltered();};
+$('#rangeDays').oninput=e=>{RANGE.days=Math.max(1,+e.target.value||1);renderFiltered();};
 $('#rangeFrom').onchange=e=>{RANGE.start=e.target.value;renderFiltered();};
 document.addEventListener('click',e=>{const b=e.target.closest('#timeMode button');if(!b)return;
   TIMEMODE=b.dataset.m;document.querySelectorAll('#timeMode button').forEach(x=>x.classList.toggle('on',x.dataset.m===TIMEMODE));
