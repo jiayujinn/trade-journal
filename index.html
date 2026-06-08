@@ -641,7 +641,7 @@ function fxVal(col,v){
   if(c==='type'){if(k==='inv')return 'Inversion';if(k==='con')return 'Continuation';return v;}
   if(/choch/.test(c)){if(k==='silverb')return 'Silver Bullet';return v;}
   if(/^regi/.test(c)){const n=parseFloat(String(raw).replace(/[^0-9.\-]/g,''));if(!isFinite(n))return v;return n>=25?'≥25':n>=20?'20–25':'<20';}
-  if(c==='adx'){const n=parseFloat(String(raw).replace(/[^0-9.\-]/g,''));if(!isFinite(n))return v;return n<20?'<20':n<25?'20–25':n<30?'25–30':n<50?'30–50':'≥50';}
+  if(c==='adx'){const n=parseFloat(String(raw).replace(/[^0-9.\-]/g,''));if(!isFinite(n))return v;return n<20?'<20':n<25?'20–25':n<30?'25–30':n<40?'30–40':n<50?'40–50':'≥50';}
   return v;
 }
 function renderFactor(){
