@@ -324,9 +324,20 @@
   </div>
 
   <div class="panel">
-    <div class="seclabel"><span class="eyebrow">Result distribution</span></div>
+    <div class="phead">
+      <div class="seclabel" style="margin-bottom:0"><span class="eyebrow">Result distribution</span></div>
+      <div class="navR" style="justify-content:flex-end">
+        <div class="pillrow" id="rdistTabs" style="justify-content:flex-end">
+          <button data-tab="all" class="on">All</button>
+          <button data-tab="setupV">Setup violation</button>
+          <button data-tab="execV">Execute violation</button>
+          <button data-tab="trail">Trailing reason</button>
+        </div>
+        <select id="rdistOpt" style="display:none"></select>
+      </div>
+    </div>
     <h2>Where you exit vs where price goes</h2>
-    <div class="help" style="margin:8px 0 4px">Share of all trades reaching each level — your actual exit (Trade Result) vs the best the market offered (Market Result).</div>
+    <div class="help" style="margin:8px 0 4px">Share of trades reaching each level — your actual exit (Trade Result) vs the best the market offered (Market Result). Pick a tab + option to see only trades with that violation / trailing reason.</div>
     <div id="resultRadar"></div>
   </div>
 
@@ -669,14 +680,41 @@ function renderTrail(){
   }).join('');
 }
 function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+// ── Result distribution: filter by violation / trailing reason ──
+let RDIST_TAB='all',RDIST_OPT='__ANY__';
+const RDIST_COL={setupV:COL.setupV,execV:COL.execV,trail:COL.trail};
+const RDIST_TABNAME={setupV:'setup violation',execV:'execute violation',trail:'trailing'};
+function rdistVals(t,col){return cellTxt(t.row[col]).split(/[,，、]/).map(cellTxt).filter(v=>v&&!/^none$/i.test(v));}
+function rdistTrades(){
+  const base=filteredTrades();
+  if(RDIST_TAB==='all')return base;
+  const col=RDIST_COL[RDIST_TAB];
+  return base.filter(t=>{const vs=rdistVals(t,col);return RDIST_OPT==='__ANY__'?vs.length>0:vs.includes(RDIST_OPT);});
+}
+function buildRdistOpts(){
+  const sel=$('#rdistOpt');if(!sel)return;
+  if(RDIST_TAB==='all'){sel.style.display='none';return;}
+  sel.style.display='';
+  const col=RDIST_COL[RDIST_TAB],counts={};
+  filteredTrades().forEach(t=>{new Set(rdistVals(t,col)).forEach(v=>counts[v]=(counts[v]||0)+1);});
+  const opts=Object.entries(counts).sort((a,b)=>b[1]-a[1]||a[0].localeCompare(b[0]));
+  const anyN=filteredTrades().filter(t=>rdistVals(t,col).length>0).length;
+  if(RDIST_OPT!=='__ANY__'&&!opts.some(([k])=>k===RDIST_OPT))RDIST_OPT='__ANY__';
+  const anyLab=RDIST_TAB==='trail'?`Any trailing (${anyN})`:`Any violation (${anyN})`;
+  sel.innerHTML=`<option value="__ANY__"${RDIST_OPT==='__ANY__'?' selected':''}>${anyLab}</option>`
+    +opts.map(([k,n])=>`<option value="${esc(k)}"${k===RDIST_OPT?' selected':''}>${esc(k)} (${n})</option>`).join('');
+}
 function renderResultRadar(){
   const box=$('#resultRadar');if(!box)return;
+  buildRdistOpts();
+  const data=rdistTrades();
   const CATS=['SL','BE','TP1','TP2','TP3','Full TP'];
   const ri=r=>r==null?null:(r<=1?0:r-1); // Trail SL folds into SL here
   const tr=CATS.map(()=>0),mk=CATS.map(()=>0);let tot=0;
-  filteredTrades().forEach(t=>{const a=ri(resRank(t.row[COL.result])),b=ri(resRank(t.row[COL.mkt]));
+  data.forEach(t=>{const a=ri(resRank(t.row[COL.result])),b=ri(resRank(t.row[COL.mkt]));
     if(a!=null||b!=null)tot++;if(a!=null)tr[a]++;if(b!=null)mk[b]++;});
-  if(!tot){box.innerHTML='<div class="help" style="color:var(--faint)">No Trade/Market Result data.</div>';return;}
+  if(!tot){const why=RDIST_TAB==='all'?'No Trade/Market Result data.':'No trades match this filter (with Trade/Market Result data).';
+    box.innerHTML='<div class="help" style="color:var(--faint)">'+why+'</div>';return;}
   const trF=tr.map(v=>v/tot),mkF=mk.map(v=>v/tot);
   const mx=Math.max(.0001,...trF,...mkF);
   const cx=210,cy=158,rad=112,N=CATS.length;
@@ -695,7 +733,7 @@ function renderResultRadar(){
     <polygon points="${poly(trF)}" fill="rgba(251,191,36,.16)" stroke="var(--accent)" stroke-width="2"/>
   </svg>
   <div class="rleg"><span><i style="background:var(--accent)"></i>Your exit</span><span><i style="background:var(--cyan)"></i>Market result</span></div>
-  <div class="help" style="margin-top:6px;text-align:center">Each spoke = share of all ${tot} trades reaching that level. Labels: trade%/market%. Cyan pushing past amber = profit left on the table.</div>`;
+  <div class="help" style="margin-top:6px;text-align:center">${RDIST_TAB==='all'?'':`<b style="color:var(--accent)">${RDIST_OPT==='__ANY__'?('Any '+RDIST_TABNAME[RDIST_TAB]):esc(RDIST_OPT)+' · '+RDIST_TABNAME[RDIST_TAB]}</b> · `}Each spoke = share of these ${tot} trades reaching that level. Labels: trade%/market%. Cyan pushing past amber = profit left on the table.</div>`;
 }
 
 // calendar
@@ -829,6 +867,11 @@ document.addEventListener('click',e=>{const b=e.target.closest('#factorBtns butt
   const v=b.dataset.idx;FACTORIDX=/^\d+$/.test(v)?+v:v;
   $('#factorBtns').querySelectorAll('button').forEach(x=>x.classList.toggle('on',x.dataset.idx===String(FACTORIDX)));
   renderFactor();});
+document.addEventListener('click',e=>{const b=e.target.closest('#rdistTabs button');if(!b)return;
+  RDIST_TAB=b.dataset.tab;RDIST_OPT='__ANY__';
+  $('#rdistTabs').querySelectorAll('button').forEach(x=>x.classList.toggle('on',x.dataset.tab===RDIST_TAB));
+  renderResultRadar();});
+$('#rdistOpt').onchange=e=>{RDIST_OPT=e.target.value;renderResultRadar();};
 document.addEventListener('click',e=>{const b=e.target.closest('#metricDock button');if(!b)return;
   METRIC=b.dataset.m;document.querySelectorAll('#metricDock button').forEach(x=>x.classList.toggle('on',x.dataset.m===METRIC));
   renderTiming();renderTOD();renderFactor();});
