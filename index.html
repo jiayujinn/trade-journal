@@ -194,9 +194,11 @@
   .pflag{position:absolute;top:5px;left:0;right:0;text-align:center;font-size:11px;line-height:1;pointer-events:none;color:var(--high)}
   .pflag.pred{opacity:.4}
   .cyc{position:absolute;inset:0;border-radius:9px;pointer-events:none}
-  .lfilters{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;margin-top:12px}
-  .lfilters button{font-size:11px;padding:4px 11px;opacity:.4;line-height:1}
-  .lfilters button.on{opacity:1;border-color:var(--accent);color:var(--accent)}
+  #calPanel{position:relative}
+  .lfilters{position:absolute;right:16px;bottom:14px;margin:0;display:flex;gap:8px}
+  .lfilters button{background:transparent;border:none;padding:0;font-size:15px;line-height:1;color:var(--muted);opacity:.4;cursor:pointer}
+  .lfilters button:hover{border:none;color:var(--accent)}
+  .lfilters button.on{opacity:1;color:var(--accent)}
   .logrow{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:10px 0}
   .lgm{font-size:11px;color:var(--muted);display:flex;flex-direction:column;gap:4px}
   #lgDiary{width:100%;background:var(--panel2);border:1px solid var(--border);border-radius:8px;color:var(--text);padding:8px;font-family:inherit;font-size:12px;margin-top:6px;resize:vertical}
@@ -273,7 +275,7 @@
     <div class="stats" id="statCards" style="margin-top:18px"></div>
   </div>
 
-  <div class="panel">
+  <div class="panel" id="calPanel">
     <div class="seclabel" style="display:flex;justify-content:space-between;align-items:center"><span class="eyebrow">Calendar</span><span id="authBox"></span></div>
     <div class="navbar">
       <div class="navL">
@@ -471,14 +473,17 @@ function recomputeCycle(){
   CYC.avgCycle=avgC;
   CYC.nextStart=starts[starts.length-1]+avgC;
   const anchors=[...starts,CYC.nextStart];
+  const M=5; // nominal menstrual length used for phase boundaries
   for(let i=0;i<anchors.length-1;i++){
-    const s=anchors[i],next=anchors[i+1],ovu=next-14;
-    for(let d=s;d<next;d++){
-      const k=diStr(d);
-      if(LOG[k]&&LOG[k].period){CYC.phase[k]='men';continue;}
-      if(d===ovu)CYC.phase[k]='ovu';
-      else if(d>ovu)CYC.phase[k]='lut';
-      else CYC.phase[k]='fol';
+    const s=anchors[i],next=anchors[i+1],L=next-s;
+    for(let o=0;o<L;o++){
+      const k=diStr(s+o),dn=o+1; // day number within cycle, 1-based
+      let ph;
+      if((LOG[k]&&LOG[k].period)||dn<=M)ph='men';
+      else if(dn<=L-16)ph='fol';
+      else if(dn<=L-13)ph='ovu';
+      else ph='lut';
+      CYC.phase[k]=ph;
     }
   }
   for(let d=CYC.nextStart;d<CYC.nextStart+avgL;d++)CYC.predicted.add(diStr(d));
@@ -928,7 +933,7 @@ function openDay(di,day){
       <td class="${rcls(t.r)}">${t.r>=0?'+':''}${t.r.toFixed(2)}R</td>
       <td class="icells">${ic}</td></tr>`;}).join('');
   const ds=lds(day);const lg=LOG[ds]||{};
-  const phName={men:'生理期',fol:'濾泡期',ovu:'排卵日',lut:'黃體期'}[CYC.phase[ds]]||(CYC.predicted.has(ds)?'預測生理期':'');
+  const phName={men:'月經期:低谷與平靜',fol:'濾泡期:陽光自信期',ovu:'排卵期:感性高峰與魅力',lut:'黃體期:暴風雨前的多愁善感'}[CYC.phase[ds]]||(CYC.predicted.has(ds)?'預測月經期':'');
   const moodSel=(field,label)=>{
     const cur=lg[field]?cleanMood(lg[field]):'';
     let opts=`<option value="">—</option>`+MOODS.map(m=>`<option ${m===cur?'selected':''}>${esc(m)}</option>`).join('');
