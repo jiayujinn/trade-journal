@@ -195,7 +195,7 @@
   .pflag.pred{opacity:.4}
   .cyc{position:absolute;inset:0;border-radius:9px;pointer-events:none}
   #calPanel{position:relative}
-  .legendbar{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-top:14px}
+  .legendbar{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-top:22px}
   .legendbar .legend{margin-top:0;flex:1}
   .lfilters{display:flex;gap:8px;flex-shrink:0}
   .lfilters button{background:transparent;border:none;padding:0;font-size:15px;line-height:1;color:var(--muted);opacity:.4;cursor:pointer}
@@ -418,7 +418,7 @@ let MOODS=(JSON.parse(localStorage.getItem('moodOpts')||'null')||['Calm','Confid
 localStorage.setItem('moodOpts',JSON.stringify(MOODS));
 let FILTERS=Object.assign({news:true,period:true,diary:true},JSON.parse(localStorage.getItem('calFilters')||'{}'));
 const FILTDEF=[['period','☪\uFE0E']];
-const PHASE_BG={men:'rgba(244,63,94,.07)',fol:'rgba(96,165,250,.063)',ovu:'rgba(167,139,250,.14)',lut:'rgba(167,139,250,.07)'};
+const PHASE_BG={men:'rgba(244,63,94,.07)',fol:'rgba(96,165,250,.063)',ovu:'rgba(167,139,250,.1)',lut:'rgba(167,139,250,.07)'};
 const lds=d=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
 let CYC={phase:{},predicted:new Set(),nextStart:null,avgCycle:28};
 
