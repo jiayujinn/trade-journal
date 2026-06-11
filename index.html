@@ -71,7 +71,7 @@
   .navR{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
   .navR select,.navR input[type=date]{background:#0d0c0b;border:1px solid var(--border2);color:var(--text);border-radius:7px;padding:5px 8px;font-size:9.5px;font-family:var(--mono);color-scheme:dark}
   .navR .rdash{color:var(--faint)}
-  #refresh,#cfgToggle{padding:5px 10px;font-size:9.5px}
+  #refresh,#cfgToggle,#authBox button{padding:5px 10px;font-size:9.5px}
   .icells{white-space:nowrap;text-align:right}
   .ic{position:relative;display:inline-block;margin-left:7px;cursor:default;font-size:13px;opacity:.6}
   .ic:hover{opacity:1}.ic.shot{cursor:pointer}
@@ -191,13 +191,13 @@
   .evrow{font-size:11px;color:#f9a8a3;display:flex;align-items:center;gap:8px;margin:3px 0}
   .evrow .t{color:var(--faint);font-family:var(--mono);font-size:10px}
   /* daily log (period / cycle / diary) */
-  .pflag{position:absolute;top:5px;left:0;right:0;text-align:center;font-size:11px;line-height:1;pointer-events:none}
+  .pflag{position:absolute;bottom:4px;right:6px;font-size:9.5px;line-height:1;pointer-events:none}
   .pflag.pred{opacity:.34}
   .cyc{position:absolute;inset:0;border-radius:9px;pointer-events:none}
-  .dic{position:absolute;right:5px;bottom:4px;font-size:12px;line-height:1}
+  .dic{position:absolute;left:5px;bottom:4px;font-size:12px;line-height:1}
   .dic .ic{opacity:.85}
   .lfilters{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
-  .lfilters button{font-size:13px;padding:4px 11px;opacity:.4;line-height:1}
+  .lfilters button{font-size:11px;padding:4px 11px;opacity:.4;line-height:1}
   .lfilters button.on{opacity:1;border-color:var(--accent);color:var(--accent)}
   .logrow{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:10px 0}
   .lgm{font-size:11px;color:var(--muted);display:flex;flex-direction:column;gap:4px}
@@ -233,7 +233,7 @@
     <div class="phead">
       <div class="seclabel" style="margin-bottom:0"><span class="eyebrow">Performance</span></div>
       <div class="pctrl">
-        <div class="row"><button id="refresh" class="acc">↻ Refresh</button><button id="cfgToggle">⚙ Settings</button></div>
+        <div class="row"><button id="refresh" class="acc" title="Refresh">↻</button><button id="cfgToggle" title="Settings">⚙</button></div>
       </div>
     </div>
     <div id="cfg" style="display:none">
@@ -403,8 +403,8 @@ let sb=null,SB_USER=null,LOG={};
 function cleanMood(m){const c=String(m).replace(/^[^\u4e00-\u9fa5A-Za-z]+/u,'').trim();return c||String(m).trim();}
 let MOODS=(JSON.parse(localStorage.getItem('moodOpts')||'null')||['冷靜','自信','焦慮','貪婪','恐懼','猶豫']).map(cleanMood);
 let FILTERS=Object.assign({news:true,period:true,diary:true},JSON.parse(localStorage.getItem('calFilters')||'{}'));
-const FILTDEF=[['news','●'],['period','🩸'],['diary','𖥶']];
-const PHASE_BG={men:'rgba(244,63,94,.10)',fol:'rgba(96,165,250,.09)',ovu:'rgba(167,139,250,.28)',lut:'rgba(167,139,250,.10)'};
+const FILTDEF=[['period','🩸']];
+const PHASE_BG={men:'rgba(244,63,94,.07)',fol:'rgba(96,165,250,.063)',ovu:'rgba(167,139,250,.07)',lut:'rgba(167,139,250,.07)'};
 const lds=d=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
 let CYC={phase:{},predicted:new Set(),nextStart:null,avgCycle:28};
 
@@ -871,7 +871,7 @@ function renderCal(){
       const ph=FILTERS.period?CYC.phase[ds]:null;
       const cyc=(ph&&PHASE_BG[ph])?`<div class="cyc" style="background:${PHASE_BG[ph]}"></div>`:'';
       let dots='';
-      if(FILTERS.news){if(evs.length)dots=`<span class="nd"></span>`;else if(evm.length)dots=`<span class="ndm"></span>`;}
+      if(evs.length)dots=`<span class="nd"></span>`;else if(evm.length)dots=`<span class="ndm"></span>`;
       let news=dots?`<div class="news">${dots}</div>`:'';
       let pf='';
       if(FILTERS.period){
@@ -879,7 +879,7 @@ function renderCal(){
         else if(CYC.predicted.has(ds))pf=`<div class="pflag pred">🩸</div>`;
       }
       let dic='';
-      if(FILTERS.diary&&lg&&lg.diary)dic=`<div class="dic"><span class="ic dico">𖥶<span class="tip">${esc(lg.diary)}</span></span></div>`;
+      if(lg&&lg.diary)dic=`<div class="dic"><span class="ic dico">𖥶<span class="tip">${esc(lg.diary)}</span></span></div>`;
       let ctr='';if(trs.length){ctr=`<div class="pnl ${rcls(a.sumR)}">${a.sumR.toFixed(1)}R</div><div class="tc">${trs.length} trades${a.win!=null?' · '+(a.win*100).toFixed(0)+'%':''}</div>`;}
       el.innerHTML=`${cyc}<div class="num">${day.getDate()}</div>${news}${pf}<div class="ctr">${ctr}</div>${dic}`;
       el.onclick=()=>openDay(di,day);
@@ -937,7 +937,7 @@ function openDay(di,day){
       <button id="lgPeriod" class="${lg.period?'acc':''}" title="${lg.period?'已標記生理期(按一下取消)':'標記生理期'}">🩸</button>
     </div>
     <div class="logrow">
-      ${moodSel('mood_pre','盤前')}${moodSel('mood_mid','盤中')}${moodSel('mood_post','盤後')}
+      ${moodSel('mood_pre','Pre-market')}${moodSel('mood_mid','Intraday')}${moodSel('mood_post','Post-market')}
       <button id="lgMoodEdit" title="編輯心情清單">✎</button>
     </div>
     <textarea id="lgDiary" rows="4" placeholder="日記…">${esc(lg.diary||'')}</textarea>
