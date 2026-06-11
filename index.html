@@ -20,6 +20,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
   :root{
     --bg:#0a0a0b;--panel:#121211;--panel2:#1a1817;--border:#2a2622;--border2:#3a342d;
@@ -189,6 +190,24 @@
   .modal .x{background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer;padding:0 6px}
   .evrow{font-size:11px;color:#f9a8a3;display:flex;align-items:center;gap:8px;margin:3px 0}
   .evrow .t{color:var(--faint);font-family:var(--mono);font-size:10px}
+  /* daily log (period / mood / diary) */
+  .pflag{position:absolute;top:5px;left:0;right:0;text-align:center;font-size:11px;line-height:1;pointer-events:none}
+  .pflag.pred{opacity:.38}
+  .moods{position:absolute;left:6px;bottom:5px;font-size:11px;line-height:1;letter-spacing:1px;pointer-events:none}
+  .dic{position:absolute;right:5px;bottom:4px;font-size:11px;line-height:1}
+  .dic .ic{opacity:.8}
+  .lfilters{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+  .lfilters button{font-size:10.5px;padding:4px 10px;opacity:.45}
+  .lfilters button.on{opacity:1;border-color:var(--accent);color:var(--accent)}
+  .logrow{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:10px 0}
+  .lgm{font-size:11px;color:var(--muted);display:flex;flex-direction:column;gap:4px}
+  #lgDiary{width:100%;background:var(--panel2);border:1px solid var(--border);border-radius:8px;color:var(--text);padding:8px;font-family:inherit;font-size:12px;margin-top:6px;resize:vertical}
+  #authBox{display:flex;align-items:center;gap:8px}
+  @media(max-width:560px){
+    .pflag{font-size:8px;top:1px}
+    .moods{font-size:7px;left:2px;bottom:2px;letter-spacing:0}
+    .dic{font-size:8px;right:2px;bottom:2px}
+  }
 </style>
 </head>
 <body>
@@ -250,7 +269,7 @@
   </div>
 
   <div class="panel">
-    <div class="seclabel"><span class="eyebrow">Calendar</span></div>
+    <div class="seclabel" style="display:flex;justify-content:space-between;align-items:center"><span class="eyebrow">Calendar</span><span id="authBox"></span></div>
     <div class="navbar">
       <div class="navL">
         <button id="prevM">‹</button>
@@ -278,11 +297,16 @@
     </div>
     <div class="wdhead"><span>Mo</span><span>Tu</span><span>We</span><span>Th</span><span>Fr</span><span>Sa</span><span>Su</span><span>Wk</span></div>
     <div class="cal" id="cal"></div>
+    <div class="lfilters" id="lfilters"></div>
     <div class="legend">
       <span><span class="dot" style="background:var(--high)"></span>High-impact USD · NFP / CPI / PPI / FOMC</span>
       <span><span class="dot" style="background:var(--med)"></span>Other red events · ISM / AHE / Unemployment / ADP</span>
       <span><span class="dot" style="background:var(--win)"></span>Green day</span>
       <span><span class="dot" style="background:var(--loss)"></span>Red day</span>
+      <span>🩸 生理期(淡 = 預測)</span>
+      <span><span class="dot" style="background:rgba(96,165,250,.7)"></span>濾泡期</span>
+      <span><span class="dot" style="background:rgba(167,139,250,1)"></span>排卵日</span>
+      <span><span class="dot" style="background:rgba(167,139,250,.45)"></span>黃體期</span>
       <span style="color:var(--blue)">▢ Today</span>
       <span>Tap a day for details</span>
     </div>
@@ -376,6 +400,96 @@ let monthCursor=(()=>{const d=new Date();return new Date(d.getFullYear(),d.getMo
 const $=s=>document.querySelector(s);
 const setStatus=(m,c='')=>{const s=$('#status');s.textContent=m;s.className='status '+c;};
 const jtz=()=>$('#journalTz').value;
+
+/* ===== Supabase: auth + daily log (period / mood / diary) ===== */
+const SB_URL='https://ptqvgvoavnbfcumgtxux.supabase.co';
+const SB_KEY='sb_publishable_9euo2si0qfD-lF39jXQMkA_0T1NJhGa';
+let sb=null,SB_USER=null,LOG={};
+let MOODS=JSON.parse(localStorage.getItem('moodOpts')||'null')||['😌 冷靜','😎 自信','😰 焦慮','🤑 貪婪','😱 恐懼','🤔 猶豫'];
+let FILTERS=Object.assign({news:true,period:true,cycle:true,mood:true,diary:true},JSON.parse(localStorage.getItem('calFilters')||'{}'));
+const FILTDEF=[['news','● 新聞'],['period','🩸 生理期'],['cycle','週期底色'],['mood','😌 心情'],['diary','📝 日記']];
+const PHASE_BG={men:'rgba(244,63,94,.10)',fol:'rgba(96,165,250,.09)',ovu:'rgba(167,139,250,.28)',lut:'rgba(167,139,250,.10)'};
+const lds=d=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+let CYC={phase:{},predicted:new Set(),nextStart:null,avgCycle:28};
+
+function sbInit(){
+  try{sb=window.supabase.createClient(SB_URL,SB_KEY);}catch(e){console.warn('Supabase init failed',e);renderAuth();return;}
+  sb.auth.onAuthStateChange((_ev,session)=>{
+    const u=session?session.user:null;
+    if((u&&u.id)===(SB_USER&&SB_USER.id)){SB_USER=u;renderAuth();return;}
+    SB_USER=u;renderAuth();
+    if(SB_USER)loadLogs();else{LOG={};recomputeCycle();renderCal();}
+  });
+}
+function renderAuth(){
+  const b=$('#authBox');if(!b)return;
+  if(!sb){b.innerHTML='<span class="help">⚠ 雲端連線失敗</span>';return;}
+  b.innerHTML=SB_USER
+    ?`<span class="help">${esc(SB_USER.email||'')}</span><button id="authBtn">登出</button>`
+    :`<button id="authBtn" class="acc">Google 登入</button>`;
+  $('#authBtn').onclick=()=>{SB_USER?sb.auth.signOut():sb.auth.signInWithOAuth({provider:'google',options:{redirectTo:location.origin+location.pathname}});};
+}
+async function loadLogs(){
+  const{data,error}=await sb.from('daily_log').select('*');
+  if(error){console.warn('loadLogs',error);setStatus('Daily log load failed: '+error.message,'err');return;}
+  LOG={};(data||[]).forEach(r=>{LOG[r.log_date]=r;});
+  recomputeCycle();renderCal();
+}
+async function saveLog(ds,patch,statEl){
+  if(!SB_USER)return;
+  LOG[ds]=Object.assign(LOG[ds]||{log_date:ds},patch);
+  const g=LOG[ds];
+  const row={user_id:SB_USER.id,log_date:ds,period:!!g.period,
+    mood_pre:g.mood_pre||null,mood_mid:g.mood_mid||null,mood_post:g.mood_post||null,
+    diary:(g.diary||'').trim()||null,updated_at:new Date().toISOString()};
+  if(statEl)statEl.textContent='儲存中…';
+  const{error}=await sb.from('daily_log').upsert(row,{onConflict:'user_id,log_date'});
+  if(statEl)statEl.textContent=error?('⚠ '+error.message):'✓ 已儲存';
+  if(!error){recomputeCycle();renderCal();}
+}
+function recomputeCycle(){
+  CYC={phase:{},predicted:new Set(),nextStart:null,avgCycle:28};
+  const days=Object.keys(LOG).filter(d=>LOG[d]&&LOG[d].period).sort();
+  if(!days.length)return;
+  const toDi=s=>Math.floor(Date.parse(s+'T00:00:00Z')/864e5);
+  const diStr=di=>new Date(di*864e5).toISOString().slice(0,10);
+  const dis=days.map(toDi);
+  const starts=[],lens=[];let runStart=dis[0],prev=dis[0],len=1;
+  for(let i=1;i<dis.length;i++){
+    if(dis[i]===prev+1){len++;}
+    else{starts.push(runStart);lens.push(len);runStart=dis[i];len=1;}
+    prev=dis[i];}
+  starts.push(runStart);lens.push(len);
+  const diffs=[];for(let i=1;i<starts.length;i++){const d=starts[i]-starts[i-1];if(d>=15&&d<=60)diffs.push(d);}
+  const recent=diffs.slice(-6);
+  const avgC=recent.length?Math.round(recent.reduce((a,b)=>a+b,0)/recent.length):28;
+  const avgL=Math.max(1,Math.round(lens.reduce((a,b)=>a+b,0)/lens.length))||5;
+  CYC.avgCycle=avgC;
+  CYC.nextStart=starts[starts.length-1]+avgC;
+  const anchors=[...starts,CYC.nextStart];
+  for(let i=0;i<anchors.length-1;i++){
+    const s=anchors[i],next=anchors[i+1],ovu=next-14;
+    for(let d=s;d<next;d++){
+      const k=diStr(d);
+      if(LOG[k]&&LOG[k].period){CYC.phase[k]='men';continue;}
+      if(d===ovu)CYC.phase[k]='ovu';
+      else if(d>ovu)CYC.phase[k]='lut';
+      else CYC.phase[k]='fol';
+    }
+  }
+  for(let d=CYC.nextStart;d<CYC.nextStart+avgL;d++)CYC.predicted.add(diStr(d));
+}
+function renderFilters(){
+  const el=$('#lfilters');if(!el)return;
+  el.innerHTML=FILTDEF.map(([k,l])=>`<button data-f="${k}" class="${FILTERS[k]?'on':''}">${l}</button>`).join('');
+}
+document.addEventListener('click',e=>{
+  const b=e.target.closest('#lfilters button');if(!b)return;
+  const k=b.dataset.f;FILTERS[k]=!FILTERS[k];
+  localStorage.setItem('calFilters',JSON.stringify(FILTERS));
+  renderFilters();renderCal();
+});
+/* ===== end Supabase block ===== */
 
 // news
 function loadCache(){try{return (JSON.parse(localStorage.getItem('ffnews_usd')||'[]')).map(e=>({title:e.title,currency:e.currency,impact:e.impact,date:new Date(e.date)}));}catch(x){return[];}}
@@ -755,14 +869,31 @@ function renderCal(){
       if(day.getMonth()===mo){monthR+=a.sumR;monthN+=a.n;}
       wkR+=a.sumR;wkN+=a.n;
       const el=document.createElement('div');
-      el.className='day'+(day.getMonth()!==mo?' other':'')+(di===todayDi?' today':'')+(trs.length?' has':'');
-      el.setAttribute('style',tint(a.sumR,a.n));
-      let dots='';if(evs.length)dots+=`<span class="nd"></span>`;if(evm.length)dots+=`<span class="ndm"></span>`;
-      const ne=evs.length+evm.length;
-      let news=dots?`<div class="news">${dots}${ne>1?`<span class="nn">${ne}</span>`:''}</div>`:'';
+      el.className='day'+(day.getMonth()!==mo?' other':'')+(di===todayDi?' today':'')+' has';
+      const ds=lds(day);const lg=LOG[ds]||null;
+      const rT=(a.n?(a.sumR>0?`rgba(66,210,154,${Math.min(.30,.07+Math.abs(a.sumR)*.025)})`:a.sumR<0?`rgba(242,89,107,${Math.min(.30,.07+Math.abs(a.sumR)*.025)})`:''):'');
+      const ph=FILTERS.cycle?CYC.phase[ds]:null;
+      const cT=ph?PHASE_BG[ph]:'';
+      let style='';
+      if(rT&&cT)style=`background-image:linear-gradient(${rT},${rT}),linear-gradient(${cT},${cT})`;
+      else if(rT||cT)style=`background:${rT||cT}`;
+      el.setAttribute('style',style);
+      let dots='';
+      if(FILTERS.news){if(evs.length)dots=`<span class="nd"></span>`;else if(evm.length)dots=`<span class="ndm"></span>`;}
+      let news=dots?`<div class="news">${dots}</div>`:'';
+      let pf='';
+      if(FILTERS.period){
+        if(lg&&lg.period)pf=`<div class="pflag">🩸</div>`;
+        else if(CYC.predicted.has(ds))pf=`<div class="pflag pred">🩸</div>`;
+      }
+      let moods='';
+      if(FILTERS.mood&&lg){const ms=[lg.mood_pre,lg.mood_mid,lg.mood_post].filter(Boolean).map(m=>m.split(' ')[0]);
+        if(ms.length)moods=`<div class="moods">${ms.join('')}</div>`;}
+      let dic='';
+      if(FILTERS.diary&&lg&&lg.diary)dic=`<div class="dic"><span class="ic">📝<span class="tip">${esc(lg.diary)}</span></span></div>`;
       let ctr='';if(trs.length){ctr=`<div class="pnl ${rcls(a.sumR)}">${a.sumR.toFixed(1)}R</div><div class="tc">${trs.length} trades${a.win!=null?' · '+(a.win*100).toFixed(0)+'%':''}</div>`;}
-      el.innerHTML=`<div class="num">${day.getDate()}</div>${news}<div class="ctr">${ctr}</div>`;
-      if(trs.length||evs.length||evm.length)el.onclick=()=>openDay(di,day);
+      el.innerHTML=`<div class="num">${day.getDate()}</div>${news}${pf}<div class="ctr">${ctr}</div>${moods}${dic}`;
+      el.onclick=()=>openDay(di,day);
       cal.appendChild(el);
     }
     const wk=document.createElement('div');wk.className='wk';
@@ -802,13 +933,48 @@ function openDay(di,day){
       <td class="${rcls(isNaN(usd)?0:usd)}">${isNaN(usd)?'':(usd>=0?'+$':'-$')+Math.abs(usd).toFixed(0)}</td>
       <td class="${rcls(t.r)}">${t.r>=0?'+':''}${t.r.toFixed(2)}R</td>
       <td class="icells">${ic}</td></tr>`;}).join('');
+  const ds=lds(day);const lg=LOG[ds]||{};
+  const phName={men:'生理期',fol:'濾泡期',ovu:'排卵日',lut:'黃體期'}[CYC.phase[ds]]||(CYC.predicted.has(ds)?'預測生理期':'');
+  const moodSel=(field,label)=>{
+    const cur=lg[field]||'';
+    let opts=`<option value="">—</option>`+MOODS.map(m=>`<option ${m===cur?'selected':''}>${esc(m)}</option>`).join('');
+    if(cur&&!MOODS.includes(cur))opts+=`<option selected>${esc(cur)}</option>`;
+    return `<label class="lgm">${label}<select data-f="${field}">${opts}</select></label>`;};
+  const logHtml=`
+    <div class="seclabel" style="margin-top:16px;display:flex;justify-content:space-between;align-items:center">
+      <span class="eyebrow">Daily log${phName?' · '+phName:''}</span><span id="lgStat" class="help"></span></div>
+    ${SB_USER?`
+    <div class="logrow">
+      <button id="lgPeriod" class="${lg.period?'acc':''}">🩸 ${lg.period?'已標記生理期(按一下取消)':'標記生理期'}</button>
+    </div>
+    <div class="logrow">
+      ${moodSel('mood_pre','盤前')}${moodSel('mood_mid','盤中')}${moodSel('mood_post','盤後')}
+      <button id="lgMoodEdit" title="編輯心情清單">✎</button>
+    </div>
+    <textarea id="lgDiary" rows="4" placeholder="日記…">${esc(lg.diary||'')}</textarea>
+    `:`<div class="help">登入後即可記錄生理期 / 心情 / 日記。<button id="lgLogin" class="acc" style="margin-left:8px">Google 登入</button></div>`}`;
   $('#modal').innerHTML=`
     <div class="mh"><div><h2>${day.getFullYear()}/${String(day.getMonth()+1).padStart(2,'0')}/${String(day.getDate()).padStart(2,'0')}</h2>
       <div class="help">${trs.length} trades · win ${a.win!=null?(a.win*100).toFixed(0)+'%':'—'} · net <span class="${rcls(a.sumR)}">${a.sumR>=0?'+':''}${a.sumR.toFixed(1)}R</span></div></div>
       <button class="x" onclick="document.getElementById('overlay').classList.remove('on')">✕</button></div>
     ${evAll.length?'<div class="help" style="color:#cbb26a">USD events</div>':''}${evHtml}
     ${trs.length?'<div class="help">Cumulative R</div>'+spark(trs):''}
-    ${trs.length?`<table style="margin-top:10px"><thead><tr><th>Time</th><th>Session</th><th>Side</th><th>Result</th><th>$</th><th>R</th><th></th></tr></thead><tbody>${rows}</tbody></table>`:'<div class="help" style="margin-top:10px">No trades this day — news only.</div>'}`;
+    ${trs.length?`<table style="margin-top:10px"><thead><tr><th>Time</th><th>Session</th><th>Side</th><th>Result</th><th>$</th><th>R</th><th></th></tr></thead><tbody>${rows}</tbody></table>`:'<div class="help" style="margin-top:10px">No trades this day.</div>'}
+    ${logHtml}`;
+  const stat=$('#lgStat');
+  if(SB_USER){
+    $('#lgPeriod').onclick=()=>{saveLog(ds,{period:!(LOG[ds]&&LOG[ds].period)},stat).then(()=>openDay(di,day));};
+    document.querySelectorAll('#modal select[data-f]').forEach(s=>{s.onchange=()=>saveLog(ds,{[s.dataset.f]:s.value||null},stat);});
+    $('#lgMoodEdit').onclick=()=>{
+      const v=prompt('編輯心情選項(用逗號分隔,格式:emoji 名稱)',MOODS.join(', '));
+      if(v==null)return;
+      MOODS=v.split(/[,，]/).map(s=>s.trim()).filter(Boolean);
+      localStorage.setItem('moodOpts',JSON.stringify(MOODS));openDay(di,day);};
+    const ta=$('#lgDiary');let dt;
+    ta.oninput=()=>{clearTimeout(dt);dt=setTimeout(()=>saveLog(ds,{diary:ta.value},stat),700);};
+  }else if($('#lgLogin')){
+    $('#lgLogin').onclick=()=>sb&&sb.auth.signInWithOAuth({provider:'google',options:{redirectTo:location.origin+location.pathname}});
+  }
   $('#overlay').classList.add('on');
 }
 $('#overlay').onclick=e=>{if(e.target.id==='overlay')$('#overlay').classList.remove('on');};
@@ -931,6 +1097,8 @@ $('#reloadNews').onclick=async()=>{
     await applyHandle(h);
   }catch(e){setStatus('Reload failed: '+e.message,'err');}
 };
+renderFilters();
+sbInit();
 loadAll();
 </script>
 </body>
