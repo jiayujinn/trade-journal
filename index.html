@@ -190,12 +190,15 @@
   .modal .x{background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer;padding:0 6px}
   .evrow{font-size:11px;color:#f9a8a3;display:flex;align-items:center;gap:8px;margin:3px 0}
   .evrow .t{color:var(--faint);font-family:var(--mono);font-size:10px}
-  /* daily log (period / cycle / diary) */
-  .pflag{position:absolute;bottom:4px;right:6px;font-size:9.5px;line-height:1;pointer-events:none}
-  .pflag.pred{opacity:.34}
+  /* daily log (period / cycle / mood / diary) */
+  .pflag{position:absolute;top:5px;left:0;right:0;text-align:center;font-size:11px;line-height:1;pointer-events:none;color:var(--faint)}
+  .pflag.pred{opacity:.4}
   .cyc{position:absolute;inset:0;border-radius:9px;pointer-events:none}
-  .dic{position:absolute;left:5px;bottom:4px;font-size:12px;line-height:1}
-  .dic .ic{opacity:.85}
+  .mdotwrap{position:absolute;left:6px;bottom:6px}
+  .ddotwrap{position:absolute;right:6px;bottom:6px}
+  .mdot,.ic.dico{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--muted);opacity:.6}
+  .ic.dico{margin:0;cursor:default}
+  .ic.dico:hover{opacity:1}
   .lfilters{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
   .lfilters button{font-size:11px;padding:4px 11px;opacity:.4;line-height:1}
   .lfilters button.on{opacity:1;border-color:var(--accent);color:var(--accent)}
@@ -205,7 +208,7 @@
   #authBox{display:flex;align-items:center;gap:8px}
   #ftip.diary{width:max-content;max-width:min(380px,82vw);white-space:pre-wrap}
   @media(max-width:560px){
-    .pflag,.cyc,.dic,.lfilters{display:none}
+    .pflag,.cyc,.mdotwrap,.ddotwrap,.lfilters{display:none}
   }
 </style>
 </head>
@@ -400,10 +403,12 @@ const jtz=()=>$('#journalTz').value;
 const SB_URL='https://ptqvgvoavnbfcumgtxux.supabase.co';
 const SB_KEY='sb_publishable_9euo2si0qfD-lF39jXQMkA_0T1NJhGa';
 let sb=null,SB_USER=null,LOG={};
-function cleanMood(m){const c=String(m).replace(/^[^\u4e00-\u9fa5A-Za-z]+/u,'').trim();return c||String(m).trim();}
-let MOODS=(JSON.parse(localStorage.getItem('moodOpts')||'null')||['冷靜','自信','焦慮','貪婪','恐懼','猶豫']).map(cleanMood);
+const MOODMAP={'冷靜':'Calm','自信':'Confident','焦慮':'Anxiety','貪婪':'Greed','恐懼':'Fear','猶豫':'Hesitation','懺悔':'Regret','後悔':'Regret'};
+function cleanMood(m){let c=String(m).replace(/^[^\u4e00-\u9fa5A-Za-z]+/u,'').trim()||String(m).trim();return MOODMAP[c]||c;}
+let MOODS=(JSON.parse(localStorage.getItem('moodOpts')||'null')||['Calm','Confident','Anxiety','Greed','Fear','Hesitation']).map(cleanMood);
+localStorage.setItem('moodOpts',JSON.stringify(MOODS));
 let FILTERS=Object.assign({news:true,period:true,diary:true},JSON.parse(localStorage.getItem('calFilters')||'{}'));
-const FILTDEF=[['period','🩸']];
+const FILTDEF=[['period','☪\uFE0E']];
 const PHASE_BG={men:'rgba(244,63,94,.07)',fol:'rgba(96,165,250,.063)',ovu:'rgba(167,139,250,.07)',lut:'rgba(167,139,250,.07)'};
 const lds=d=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
 let CYC={phase:{},predicted:new Set(),nextStart:null,avgCycle:28};
@@ -875,13 +880,13 @@ function renderCal(){
       let news=dots?`<div class="news">${dots}</div>`:'';
       let pf='';
       if(FILTERS.period){
-        if(lg&&lg.period)pf=`<div class="pflag">🩸</div>`;
-        else if(CYC.predicted.has(ds))pf=`<div class="pflag pred">🩸</div>`;
+        if(lg&&lg.period)pf=`<div class="pflag">☪\uFE0E</div>`;
+        else if(CYC.predicted.has(ds))pf=`<div class="pflag pred">☪\uFE0E</div>`;
       }
-      let dic='';
-      if(lg&&lg.diary)dic=`<div class="dic"><span class="ic dico">𖥶<span class="tip">${esc(lg.diary)}</span></span></div>`;
+      let mdot=(lg&&(lg.mood_pre||lg.mood_mid||lg.mood_post))?`<div class="mdotwrap"><span class="mdot"></span></div>`:'';
+      let ddot=(lg&&lg.diary)?`<div class="ddotwrap"><span class="ic dico"><span class="tip">${esc(lg.diary)}</span></span></div>`:'';
       let ctr='';if(trs.length){ctr=`<div class="pnl ${rcls(a.sumR)}">${a.sumR.toFixed(1)}R</div><div class="tc">${trs.length} trades${a.win!=null?' · '+(a.win*100).toFixed(0)+'%':''}</div>`;}
-      el.innerHTML=`${cyc}<div class="num">${day.getDate()}</div>${news}${pf}<div class="ctr">${ctr}</div>${dic}`;
+      el.innerHTML=`${cyc}<div class="num">${day.getDate()}</div>${news}${pf}<div class="ctr">${ctr}</div>${mdot}${ddot}`;
       el.onclick=()=>openDay(di,day);
       cal.appendChild(el);
     }
@@ -925,7 +930,7 @@ function openDay(di,day){
   const ds=lds(day);const lg=LOG[ds]||{};
   const phName={men:'生理期',fol:'濾泡期',ovu:'排卵日',lut:'黃體期'}[CYC.phase[ds]]||(CYC.predicted.has(ds)?'預測生理期':'');
   const moodSel=(field,label)=>{
-    const cur=lg[field]||'';
+    const cur=lg[field]?cleanMood(lg[field]):'';
     let opts=`<option value="">—</option>`+MOODS.map(m=>`<option ${m===cur?'selected':''}>${esc(m)}</option>`).join('');
     if(cur&&!MOODS.includes(cur))opts+=`<option selected>${esc(cur)}</option>`;
     return `<label class="lgm">${label}<select data-f="${field}">${opts}</select></label>`;};
