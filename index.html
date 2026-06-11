@@ -190,16 +190,11 @@
   .modal .x{background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer;padding:0 6px}
   .evrow{font-size:11px;color:#f9a8a3;display:flex;align-items:center;gap:8px;margin:3px 0}
   .evrow .t{color:var(--faint);font-family:var(--mono);font-size:10px}
-  /* daily log (period / cycle / mood / diary) */
-  .pflag{position:absolute;top:5px;left:0;right:0;text-align:center;font-size:11px;line-height:1;pointer-events:none;color:var(--faint)}
+  /* daily log (period / cycle / hover popup) */
+  .pflag{position:absolute;top:5px;left:0;right:0;text-align:center;font-size:11px;line-height:1;pointer-events:none;color:var(--high)}
   .pflag.pred{opacity:.4}
   .cyc{position:absolute;inset:0;border-radius:9px;pointer-events:none}
-  .mdotwrap{position:absolute;left:6px;bottom:6px}
-  .ddotwrap{position:absolute;right:6px;bottom:6px}
-  .mdot,.ic.dico{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--muted);opacity:.6}
-  .ic.dico{margin:0;cursor:default}
-  .ic.dico:hover{opacity:1}
-  .lfilters{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+  .lfilters{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;margin-top:12px}
   .lfilters button{font-size:11px;padding:4px 11px;opacity:.4;line-height:1}
   .lfilters button.on{opacity:1;border-color:var(--accent);color:var(--accent)}
   .logrow{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:10px 0}
@@ -207,8 +202,16 @@
   #lgDiary{width:100%;background:var(--panel2);border:1px solid var(--border);border-radius:8px;color:var(--text);padding:8px;font-family:inherit;font-size:12px;margin-top:6px;resize:vertical}
   #authBox{display:flex;align-items:center;gap:8px}
   #ftip.diary{width:max-content;max-width:min(380px,82vw);white-space:pre-wrap}
+  #dtip{position:fixed;display:none;z-index:120;max-width:min(320px,80vw);background:#16140f;border:1px solid var(--border2);
+    border-radius:9px;padding:9px 11px;font-size:11.5px;line-height:1.55;color:var(--text);box-shadow:0 10px 30px rgba(0,0,0,.6);
+    pointer-events:none;font-family:var(--sans)}
+  #dtip .dlm{display:flex;flex-direction:column;gap:2px}
+  #dtip .dlm>div{display:flex;justify-content:space-between;gap:18px}
+  #dtip .dlm span{color:var(--muted)}
+  #dtip .dld{white-space:pre-wrap;margin-top:6px}
+  #dtip .dld.brd{border-top:1px solid var(--border);padding-top:6px}
   @media(max-width:560px){
-    .pflag,.cyc,.mdotwrap,.ddotwrap,.lfilters{display:none}
+    .pflag,.cyc,.lfilters{display:none}
   }
 </style>
 </head>
@@ -873,20 +876,17 @@ function renderCal(){
       el.className='day'+(day.getMonth()!==mo?' other':'')+(di===todayDi?' today':'')+' has';
       const ds=lds(day);const lg=LOG[ds]||null;
       el.setAttribute('style',tint(a.sumR,a.n));
+      el.dataset.ds=ds;
       const ph=FILTERS.period?CYC.phase[ds]:null;
       const cyc=(ph&&PHASE_BG[ph])?`<div class="cyc" style="background:${PHASE_BG[ph]}"></div>`:'';
       let dots='';
       if(evs.length)dots=`<span class="nd"></span>`;else if(evm.length)dots=`<span class="ndm"></span>`;
       let news=dots?`<div class="news">${dots}</div>`:'';
       let pf='';
-      if(FILTERS.period){
-        if(lg&&lg.period)pf=`<div class="pflag">☪\uFE0E</div>`;
-        else if(CYC.predicted.has(ds))pf=`<div class="pflag pred">☪\uFE0E</div>`;
-      }
-      let mdot=(lg&&(lg.mood_pre||lg.mood_mid||lg.mood_post))?`<div class="mdotwrap"><span class="mdot"></span></div>`:'';
-      let ddot=(lg&&lg.diary)?`<div class="ddotwrap"><span class="ic dico"><span class="tip">${esc(lg.diary)}</span></span></div>`:'';
+      if(lg&&lg.period)pf=`<div class="pflag">☪\uFE0E</div>`;
+      else if(CYC.predicted.has(ds))pf=`<div class="pflag pred">☪\uFE0E</div>`;
       let ctr='';if(trs.length){ctr=`<div class="pnl ${rcls(a.sumR)}">${a.sumR.toFixed(1)}R</div><div class="tc">${trs.length} trades${a.win!=null?' · '+(a.win*100).toFixed(0)+'%':''}</div>`;}
-      el.innerHTML=`${cyc}<div class="num">${day.getDate()}</div>${news}${pf}<div class="ctr">${ctr}</div>${mdot}${ddot}`;
+      el.innerHTML=`${cyc}<div class="num">${day.getDate()}</div>${news}${pf}<div class="ctr">${ctr}</div>`;
       el.onclick=()=>openDay(di,day);
       cal.appendChild(el);
     }
@@ -1015,6 +1015,29 @@ $('#todayBtn').onclick=()=>{const d=new Date();monthCursor=new Date(d.getFullYea
 ['#dateCol','#rCol','#sessCol'].forEach(s=>$(s).onchange=()=>{rebuildTrades();renderAll();});
 $('#journalTz').onchange=renderAll;
 const ftip=document.createElement('div');ftip.id='ftip';document.body.appendChild(ftip);
+const dtip=document.createElement('div');dtip.id='dtip';document.body.appendChild(dtip);
+function dayLogHtml(lg){
+  const anyMood=lg.mood_pre||lg.mood_mid||lg.mood_post;
+  let h='';
+  if(anyMood){
+    const rows=[['Pre-market',lg.mood_pre],['Intraday',lg.mood_mid],['Post-market',lg.mood_post]]
+      .map(([k,v])=>`<div><span>${k}</span><b>${v?esc(cleanMood(v)):'—'}</b></div>`).join('');
+    h+=`<div class="dlm">${rows}</div>`;
+  }
+  if(lg.diary)h+=`<div class="dld${anyMood?' brd':''}">${esc(lg.diary)}</div>`;
+  return h;
+}
+document.addEventListener('mousemove',e=>{
+  const cell=e.target.closest('.day');
+  const lg=cell&&cell.dataset.ds?LOG[cell.dataset.ds]:null;
+  if(lg&&(lg.mood_pre||lg.mood_mid||lg.mood_post||lg.diary)){
+    dtip.innerHTML=dayLogHtml(lg);dtip.style.display='block';
+    let left=e.clientX+14,top=e.clientY+16;
+    if(left+dtip.offsetWidth>window.innerWidth-8)left=e.clientX-dtip.offsetWidth-14;
+    if(top+dtip.offsetHeight>window.innerHeight-8)top=e.clientY-dtip.offsetHeight-16;
+    dtip.style.left=Math.max(8,left)+'px';dtip.style.top=Math.max(8,top)+'px';
+  }else if(dtip.style.display==='block'){dtip.style.display='none';}
+},{passive:true});
 document.addEventListener('mouseover',e=>{const ic=e.target.closest('.ic');if(!ic)return;const tip=ic.querySelector('.tip');if(!tip)return;
   ftip.classList.toggle('diary',ic.classList.contains('dico'));
   ftip.innerHTML=tip.innerHTML;ftip.style.display='block';
