@@ -190,23 +190,22 @@
   .modal .x{background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer;padding:0 6px}
   .evrow{font-size:11px;color:#f9a8a3;display:flex;align-items:center;gap:8px;margin:3px 0}
   .evrow .t{color:var(--faint);font-family:var(--mono);font-size:10px}
-  /* daily log (period / mood / diary) */
+  /* daily log (period / cycle / diary) */
   .pflag{position:absolute;top:5px;left:0;right:0;text-align:center;font-size:11px;line-height:1;pointer-events:none}
-  .pflag.pred{opacity:.38}
-  .moods{position:absolute;left:6px;bottom:5px;font-size:11px;line-height:1;letter-spacing:1px;pointer-events:none}
-  .dic{position:absolute;right:5px;bottom:4px;font-size:11px;line-height:1}
-  .dic .ic{opacity:.8}
+  .pflag.pred{opacity:.34}
+  .cyc{position:absolute;inset:0;border-radius:9px;pointer-events:none}
+  .dic{position:absolute;right:5px;bottom:4px;font-size:12px;line-height:1}
+  .dic .ic{opacity:.85}
   .lfilters{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
-  .lfilters button{font-size:10.5px;padding:4px 10px;opacity:.45}
+  .lfilters button{font-size:13px;padding:4px 11px;opacity:.4;line-height:1}
   .lfilters button.on{opacity:1;border-color:var(--accent);color:var(--accent)}
   .logrow{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:10px 0}
   .lgm{font-size:11px;color:var(--muted);display:flex;flex-direction:column;gap:4px}
   #lgDiary{width:100%;background:var(--panel2);border:1px solid var(--border);border-radius:8px;color:var(--text);padding:8px;font-family:inherit;font-size:12px;margin-top:6px;resize:vertical}
   #authBox{display:flex;align-items:center;gap:8px}
+  #ftip.diary{width:max-content;max-width:min(380px,82vw);white-space:pre-wrap}
   @media(max-width:560px){
-    .pflag{font-size:8px;top:1px}
-    .moods{font-size:7px;left:2px;bottom:2px;letter-spacing:0}
-    .dic{font-size:8px;right:2px;bottom:2px}
+    .pflag,.cyc,.dic,.lfilters{display:none}
   }
 </style>
 </head>
@@ -303,10 +302,6 @@
       <span><span class="dot" style="background:var(--med)"></span>Other red events · ISM / AHE / Unemployment / ADP</span>
       <span><span class="dot" style="background:var(--win)"></span>Green day</span>
       <span><span class="dot" style="background:var(--loss)"></span>Red day</span>
-      <span>🩸 生理期(淡 = 預測)</span>
-      <span><span class="dot" style="background:rgba(96,165,250,.7)"></span>濾泡期</span>
-      <span><span class="dot" style="background:rgba(167,139,250,1)"></span>排卵日</span>
-      <span><span class="dot" style="background:rgba(167,139,250,.45)"></span>黃體期</span>
       <span style="color:var(--blue)">▢ Today</span>
       <span>Tap a day for details</span>
     </div>
@@ -405,9 +400,10 @@ const jtz=()=>$('#journalTz').value;
 const SB_URL='https://ptqvgvoavnbfcumgtxux.supabase.co';
 const SB_KEY='sb_publishable_9euo2si0qfD-lF39jXQMkA_0T1NJhGa';
 let sb=null,SB_USER=null,LOG={};
-let MOODS=JSON.parse(localStorage.getItem('moodOpts')||'null')||['😌 冷靜','😎 自信','😰 焦慮','🤑 貪婪','😱 恐懼','🤔 猶豫'];
-let FILTERS=Object.assign({news:true,period:true,cycle:true,mood:true,diary:true},JSON.parse(localStorage.getItem('calFilters')||'{}'));
-const FILTDEF=[['news','● 新聞'],['period','🩸 生理期'],['cycle','週期底色'],['mood','😌 心情'],['diary','📝 日記']];
+function cleanMood(m){const c=String(m).replace(/^[^\u4e00-\u9fa5A-Za-z]+/u,'').trim();return c||String(m).trim();}
+let MOODS=(JSON.parse(localStorage.getItem('moodOpts')||'null')||['冷靜','自信','焦慮','貪婪','恐懼','猶豫']).map(cleanMood);
+let FILTERS=Object.assign({news:true,period:true,diary:true},JSON.parse(localStorage.getItem('calFilters')||'{}'));
+const FILTDEF=[['news','●'],['period','🩸'],['diary','𖥶']];
 const PHASE_BG={men:'rgba(244,63,94,.10)',fol:'rgba(96,165,250,.09)',ovu:'rgba(167,139,250,.28)',lut:'rgba(167,139,250,.10)'};
 const lds=d=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
 let CYC={phase:{},predicted:new Set(),nextStart:null,avgCycle:28};
@@ -423,10 +419,10 @@ function sbInit(){
 }
 function renderAuth(){
   const b=$('#authBox');if(!b)return;
-  if(!sb){b.innerHTML='<span class="help">⚠ 雲端連線失敗</span>';return;}
+  if(!sb){b.innerHTML='<span class="help">⚠ Sync unavailable</span>';return;}
   b.innerHTML=SB_USER
-    ?`<span class="help">${esc(SB_USER.email||'')}</span><button id="authBtn">登出</button>`
-    :`<button id="authBtn" class="acc">Google 登入</button>`;
+    ?`<span class="help">${esc(SB_USER.email||'')}</span><button id="authBtn">Sign out</button>`
+    :`<button id="authBtn" class="acc">Sign in</button>`;
   $('#authBtn').onclick=()=>{SB_USER?sb.auth.signOut():sb.auth.signInWithOAuth({provider:'google',options:{redirectTo:location.origin+location.pathname}});};
 }
 async function loadLogs(){
@@ -871,13 +867,9 @@ function renderCal(){
       const el=document.createElement('div');
       el.className='day'+(day.getMonth()!==mo?' other':'')+(di===todayDi?' today':'')+' has';
       const ds=lds(day);const lg=LOG[ds]||null;
-      const rT=(a.n?(a.sumR>0?`rgba(66,210,154,${Math.min(.30,.07+Math.abs(a.sumR)*.025)})`:a.sumR<0?`rgba(242,89,107,${Math.min(.30,.07+Math.abs(a.sumR)*.025)})`:''):'');
-      const ph=FILTERS.cycle?CYC.phase[ds]:null;
-      const cT=ph?PHASE_BG[ph]:'';
-      let style='';
-      if(rT&&cT)style=`background-image:linear-gradient(${rT},${rT}),linear-gradient(${cT},${cT})`;
-      else if(rT||cT)style=`background:${rT||cT}`;
-      el.setAttribute('style',style);
+      el.setAttribute('style',tint(a.sumR,a.n));
+      const ph=FILTERS.period?CYC.phase[ds]:null;
+      const cyc=(ph&&PHASE_BG[ph])?`<div class="cyc" style="background:${PHASE_BG[ph]}"></div>`:'';
       let dots='';
       if(FILTERS.news){if(evs.length)dots=`<span class="nd"></span>`;else if(evm.length)dots=`<span class="ndm"></span>`;}
       let news=dots?`<div class="news">${dots}</div>`:'';
@@ -886,13 +878,10 @@ function renderCal(){
         if(lg&&lg.period)pf=`<div class="pflag">🩸</div>`;
         else if(CYC.predicted.has(ds))pf=`<div class="pflag pred">🩸</div>`;
       }
-      let moods='';
-      if(FILTERS.mood&&lg){const ms=[lg.mood_pre,lg.mood_mid,lg.mood_post].filter(Boolean).map(m=>m.split(' ')[0]);
-        if(ms.length)moods=`<div class="moods">${ms.join('')}</div>`;}
       let dic='';
-      if(FILTERS.diary&&lg&&lg.diary)dic=`<div class="dic"><span class="ic">📝<span class="tip">${esc(lg.diary)}</span></span></div>`;
+      if(FILTERS.diary&&lg&&lg.diary)dic=`<div class="dic"><span class="ic dico">𖥶<span class="tip">${esc(lg.diary)}</span></span></div>`;
       let ctr='';if(trs.length){ctr=`<div class="pnl ${rcls(a.sumR)}">${a.sumR.toFixed(1)}R</div><div class="tc">${trs.length} trades${a.win!=null?' · '+(a.win*100).toFixed(0)+'%':''}</div>`;}
-      el.innerHTML=`<div class="num">${day.getDate()}</div>${news}${pf}<div class="ctr">${ctr}</div>${moods}${dic}`;
+      el.innerHTML=`${cyc}<div class="num">${day.getDate()}</div>${news}${pf}<div class="ctr">${ctr}</div>${dic}`;
       el.onclick=()=>openDay(di,day);
       cal.appendChild(el);
     }
@@ -945,7 +934,7 @@ function openDay(di,day){
       <span class="eyebrow">Daily log${phName?' · '+phName:''}</span><span id="lgStat" class="help"></span></div>
     ${SB_USER?`
     <div class="logrow">
-      <button id="lgPeriod" class="${lg.period?'acc':''}">🩸 ${lg.period?'已標記生理期(按一下取消)':'標記生理期'}</button>
+      <button id="lgPeriod" class="${lg.period?'acc':''}" title="${lg.period?'已標記生理期(按一下取消)':'標記生理期'}">🩸</button>
     </div>
     <div class="logrow">
       ${moodSel('mood_pre','盤前')}${moodSel('mood_mid','盤中')}${moodSel('mood_post','盤後')}
@@ -1022,6 +1011,7 @@ $('#todayBtn').onclick=()=>{const d=new Date();monthCursor=new Date(d.getFullYea
 $('#journalTz').onchange=renderAll;
 const ftip=document.createElement('div');ftip.id='ftip';document.body.appendChild(ftip);
 document.addEventListener('mouseover',e=>{const ic=e.target.closest('.ic');if(!ic)return;const tip=ic.querySelector('.tip');if(!tip)return;
+  ftip.classList.toggle('diary',ic.classList.contains('dico'));
   ftip.innerHTML=tip.innerHTML;ftip.style.display='block';
   const r=ic.getBoundingClientRect();
   ftip.style.left=Math.max(8,Math.min(window.innerWidth-ftip.offsetWidth-8,r.right-ftip.offsetWidth))+'px';
