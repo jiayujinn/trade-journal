@@ -209,6 +209,7 @@
   #lgPeriod.pon,#lgPeriod.pon:hover{border-color:var(--high);color:var(--high);background:var(--panel2)}
   .lglabel{display:block;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-top:12px}
   #dtip .dlh{display:block;font-size:9.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:2px}
+  #dtip .dlphase{color:var(--accent);font-size:11px;font-weight:600;margin-bottom:7px;padding-bottom:6px;border-bottom:1px solid var(--border)}
   #authBox{display:flex;align-items:center;gap:8px}
   #ftip.diary{width:max-content;max-width:min(380px,82vw);white-space:pre-wrap}
   #dtip{position:fixed;display:none;z-index:120;max-width:min(320px,80vw);background:#16140f;border:1px solid var(--border2);
@@ -423,7 +424,9 @@ let MOODS=(JSON.parse(localStorage.getItem('moodOpts')||'null')||['Calm','Confid
 localStorage.setItem('moodOpts',JSON.stringify(MOODS));
 let FILTERS=Object.assign({news:true,period:true,diary:true},JSON.parse(localStorage.getItem('calFilters')||'{}'));
 const FILTDEF=[['period','☪\uFE0E']];
-const PHASE_BG={men:'rgba(244,63,94,.049)',fol:'rgba(96,165,250,.044)',ovu:'rgba(167,139,250,.07)',lut:'rgba(167,139,250,.049)'};
+const PHASE_BG={men:'rgba(244,63,94,.049)',fol:'rgba(96,165,250,.048)',ovu:'rgba(167,139,250,.07)',lut:'rgba(167,139,250,.049)'};
+const PHASE_NAME={men:'月經期:低谷與平靜',fol:'濾泡期:陽光自信期',ovu:'排卵期:感性高峰與魅力',lut:'黃體期:暴風雨前的多愁善感'};
+function phaseName(ds){return PHASE_NAME[CYC.phase[ds]]||(CYC.predicted.has(ds)?'預測月經期':'');}
 const lds=d=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
 let CYC={phase:{},predicted:new Set(),nextStart:null,avgCycle:28};
 
@@ -945,7 +948,7 @@ function openDay(di,day){
       <td class="${rcls(t.r)}">${t.r>=0?'+':''}${t.r.toFixed(2)}R</td>
       <td class="icells">${ic}</td></tr>`;}).join('');
   const ds=lds(day);const lg=LOG[ds]||{};
-  const phName={men:'月經期:低谷與平靜',fol:'濾泡期:陽光自信期',ovu:'排卵期:感性高峰與魅力',lut:'黃體期:暴風雨前的多愁善感'}[CYC.phase[ds]]||(CYC.predicted.has(ds)?'預測月經期':'');
+  const phName=phaseName(ds);
   const moodSel=(field,label)=>{
     const cur=lg[field]?cleanMood(lg[field]):'';
     let opts=`<option value="">—</option>`+MOODS.map(m=>`<option ${m===cur?'selected':''}>${esc(m)}</option>`).join('');
@@ -953,7 +956,7 @@ function openDay(di,day){
     return `<label class="lgm">${label}<select data-f="${field}">${opts}</select></label>`;};
   const logHtml=`
     <div class="seclabel" style="margin-top:16px;display:flex;justify-content:space-between;align-items:center">
-      <span class="eyebrow">Daily log${phName?' · '+phName:''}</span><span id="lgStat" class="help"></span></div>
+      <span class="eyebrow">${phName||'Daily log'}</span><span id="lgStat" class="help"></span></div>
     ${SB_USER?`
     <div class="logrow">
       <button id="lgPeriod" class="${lg.period?'pon':''}" title="${lg.period?'Period marked (tap to clear)':'Mark period'}">☪\uFE0E</button>
@@ -1038,9 +1041,10 @@ $('#todayBtn').onclick=()=>{const d=new Date();monthCursor=new Date(d.getFullYea
 $('#journalTz').onchange=renderAll;
 const ftip=document.createElement('div');ftip.id='ftip';document.body.appendChild(ftip);
 const dtip=document.createElement('div');dtip.id='dtip';document.body.appendChild(dtip);
-function dayLogHtml(lg){
-  const anyMood=lg.mood_pre||lg.mood_mid||lg.mood_post;
+function dayLogHtml(lg,pn){
   let h='';
+  if(pn)h+=`<div class="dlphase">${esc(pn)}</div>`;
+  const anyMood=lg.mood_pre||lg.mood_mid||lg.mood_post;
   if(anyMood){
     const rows=[['Pre-market',lg.mood_pre],['Intraday',lg.mood_mid],['Post-market',lg.mood_post]]
       .map(([k,v])=>`<div><span>${k}</span><b>${v?esc(cleanMood(v)):'—'}</b></div>`).join('');
@@ -1055,7 +1059,7 @@ document.addEventListener('mousemove',e=>{
   const cell=e.target.closest('.day');
   const lg=cell&&cell.dataset.ds?LOG[cell.dataset.ds]:null;
   if(lg&&(lg.mood_pre||lg.mood_mid||lg.mood_post||lg.diary||lg.trade_diary)){
-    dtip.innerHTML=dayLogHtml(lg);dtip.style.display='block';
+    dtip.innerHTML=dayLogHtml(lg,phaseName(cell.dataset.ds));dtip.style.display='block';
     let left=e.clientX+14,top=e.clientY+16;
     if(left+dtip.offsetWidth>window.innerWidth-8)left=e.clientX-dtip.offsetWidth-14;
     if(top+dtip.offsetHeight>window.innerHeight-8)top=e.clientY-dtip.offsetHeight-16;
@@ -1091,13 +1095,11 @@ document.addEventListener('click',e=>{const b=e.target.closest('#metricDock butt
   secs.forEach(s=>io.observe(s));})();
 ['#sheetId','#sheetName'].forEach(s=>$(s).onchange=loadAll);
 function mapEv(x){
-  let title=x.title||x.event||x.Name||'';
-  const est=x.estimated===true||x.estimated==='true';
-  if(est)title='(Estimated) '+title;
+  const title=x.title||x.event||x.Name||'';
   const cur=x.currency||x.Currency||((x.country==='US'||x.country==='USA')?'USD':x.country)||'';
   const impact=x.impact||x.Impact||'';
   let ds=String(x.date||x.Date||'').trim().replace(/^(\d{4})[.\/](\d{1,2})[.\/](\d{1,2})/,'$1-$2-$3').replace(' ','T');
-  return {title,currency:cur,impact,estimated:est,date:new Date(/[zZ]|[+\-]\d\d:?\d\d$/.test(ds)?ds:ds+'Z')};}
+  return {title,currency:cur,impact,date:new Date(/[zZ]|[+\-]\d\d:?\d\d$/.test(ds)?ds:ds+'Z')};}
 $('#histFile').onchange=e=>{const f=e.target.files[0];if(!f)return;const rd=new FileReader();
   rd.onload=()=>{try{const arr=JSON.parse(rd.result);if(!Array.isArray(arr))throw new Error('Not an events array (maybe an error message)');
     HIST=arr.map(mapEv);loadNews().then(()=>{renderAll();setStatus(`Loaded ${HIST.length} from file · red ${usdHigh().length} / amber ${usdMed().length}`,'ok');});}
