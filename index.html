@@ -197,7 +197,8 @@
   .evrow{font-size:11px;color:#f9a8a3;display:flex;align-items:center;gap:8px;margin:3px 0}
   .evrow .t{color:var(--faint);font-family:var(--mono);font-size:10px}
   /* daily log (period / cycle / hover popup) */
-  .pflag{position:absolute;top:5px;left:0;right:0;text-align:center;font-size:11px;line-height:1;pointer-events:none;color:var(--high)}
+  .pflag{position:absolute;top:5px;left:0;right:0;display:flex;justify-content:center;line-height:0;pointer-events:none;color:var(--high)}
+  .pmoon{width:12px;height:12px;display:block}
   .pflag.pred{opacity:.4}
   .cyc{position:absolute;inset:0;border-radius:9px;pointer-events:none}
   #calPanel{position:relative}
@@ -235,7 +236,8 @@
   #dtip .dld.brd{border-top:1px solid var(--border);padding-top:6px}
   @media(max-width:560px){
     .lfilters button{font-size:17px}
-    .pflag{top:auto;left:auto;right:4px;bottom:3px;text-align:right;font-size:8px}
+    .pflag{top:auto;left:auto;right:0.5px;bottom:3px;display:inline-block}
+    .pflag .pmoon{width:10px;height:10px}
   }
 </style>
 </head>
@@ -444,6 +446,7 @@ let MOODS=(JSON.parse(localStorage.getItem('moodOpts')||'null')||['Calm','Confid
 localStorage.setItem('moodOpts',JSON.stringify(MOODS));
 let FILTERS=Object.assign({news:true,period:true,diary:true},JSON.parse(localStorage.getItem('calFilters')||'{}'));
 const FILTDEF=[['period','☪\uFE0E']];
+const MOON='<svg class="pmoon" viewBox="0 0 22 22" aria-hidden="true"><path fill="currentColor" d="M11 4.2a7 7 0 1 0 0 13.6 8.2 8.2 0 0 1 0-13.6z"/><path fill="currentColor" d="M15.1 7.2l.62 1.28 1.4.18-1.03.98.26 1.39-1.25-.67-1.25.67.26-1.39-1.03-.98 1.4-.18z"/></svg>';
 const PHASE_BG={men:'rgba(244,63,94,.05)',fol:'rgba(80,155,250,.045)',ovu:'rgba(167,139,250,.06)',lut:'rgba(150,140,250,.045)',pms:'rgba(215,120,200,.055)'};
 const PHASE_NAME={men:'月經期:低谷與平靜',fol:'濾泡期:陽光自信期',ovu:'排卵期:感性高峰與魅力',lut:'黃體期:暴風雨前的多愁善感',pms:'黃體期·PMS:情緒風暴'};
 function phaseName(ds){return PHASE_NAME[CYC.phase[ds]]||(CYC.predicted.has(ds)?'預測月經期':'');}
@@ -980,8 +983,8 @@ function renderCal(){
       if(evs.length)dots=`<span class="nd"></span>`;else if(evm.length)dots=`<span class="ndm"></span>`;
       let news=dots?`<div class="news">${dots}</div>`:'';
       let pf='';
-      if(lg&&lg.period)pf=`<div class="pflag">☪\uFE0E</div>`;
-      else if(CYC.predicted.has(ds))pf=`<div class="pflag pred">☪\uFE0E</div>`;
+      if(lg&&lg.period)pf=`<div class="pflag">${MOON}</div>`;
+      else if(CYC.predicted.has(ds))pf=`<div class="pflag pred">${MOON}</div>`;
       let ctr='';if(trs.length){ctr=`<div class="pnl ${rcls(a.sumR)}">${a.sumR.toFixed(1)}R</div><div class="tc">${trs.length} trades${a.win!=null?' · '+(a.win*100).toFixed(0)+'%':''}</div>`;}
       el.innerHTML=`${cyc}<div class="num">${day.getDate()}</div>${news}${pf}<div class="ctr">${ctr}</div>`;
       el.onclick=()=>openDay(di,day);
