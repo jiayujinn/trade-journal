@@ -170,7 +170,6 @@
     .day .tc{display:none}
     .news{top:3px;right:3px;gap:2px}
     .news .nd,.news .ndm{width:5px;height:5px}
-    .pflag{top:auto;left:auto;right:4px;bottom:3px;text-align:right;font-size:8px}
     .wk{min-height:50px;padding:3px;overflow:hidden}
     .wk .wl,.wk .wt{display:none}
     .wk .wr{font-size:12px;white-space:nowrap}
@@ -236,6 +235,7 @@
   #dtip .dld.brd{border-top:1px solid var(--border);padding-top:6px}
   @media(max-width:560px){
     .lfilters button{font-size:17px}
+    .pflag{top:auto;left:auto;right:4px;bottom:3px;text-align:right;font-size:8px}
   }
 </style>
 </head>
@@ -337,7 +337,7 @@
     </div>
   </div>
 
-  <div class="panel" id="cycPanel">
+  <div class="panel metricsec" id="cycPanel">
     <div class="seclabel"><span class="eyebrow">Cycle analysis</span></div>
     <div class="help" id="cycNote" style="margin-bottom:12px"></div>
     <div id="cycBody"></div>
@@ -474,16 +474,24 @@ function renderCycleAnalysis(){
   Object.keys(LOG).forEach(k=>{const lg=LOG[k];const p=phaseForDi(Math.floor(Date.parse(k+'T00:00:00Z')/864e5));if(!p)return;
     [lg.mood_pre,lg.mood_mid,lg.mood_post].forEach(m=>{if(m){m=cleanMood(m);moodByPhase[p][m]=(moodByPhase[p][m]||0)+1;}});});
   const topMood=p=>{const e=Object.entries(moodByPhase[p]);if(!e.length)return '';e.sort((a,b)=>b[1]-a[1]);return e[0][0];};
-  const stats=order.map(([k,label])=>{const a=agg(groups[k]);return{k,label,n:a.n,winAll:a.winAll,avgR:a.avgR,sumR:a.sumR};});
+  const stats=order.map(([k,label])=>{const a=agg(groups[k]);return{k,label,n:a.n,winAll:a.winAll,avgR:a.avgR,sumR:a.sumR,pf:a.pf};});
+  const m=METRIC;
   const mAvg=Math.max(1e-9,...stats.map(s=>Math.abs(s.avgR)));
+  const mSum=Math.max(1e-9,...stats.map(s=>Math.abs(s.sumR)));
   const total=stats.reduce((s,x)=>s+x.n,0);
   if(note)note.innerHTML=`Estimated from your logged periods (${CYC.avgCycle}-day cycle) across ${total} trades. Accuracy improves as you log more cycles.`;
   const bars=stats.map(s=>{
-    const v=s.avgR,pos=v>=0,pct=Math.min(50,Math.abs(v)/mAvg*50);
+    let pos=true,pct=0,mode='div',valTxt;
+    if(!s.n){valTxt=(m==='win'||m==='pf')?'—':(m==='avgR'?'+0.00R':'+0.0R');if(m==='win')mode='lr';}
+    else if(m==='win'){const v=s.winAll==null?0:s.winAll;mode='lr';pos=v>=0.5;pct=v*100;valTxt=s.winAll==null?'—':(v*100).toFixed(0)+'%';}
+    else if(m==='avgR'){const v=s.avgR;pos=v>=0;pct=Math.min(50,Math.abs(v)/mAvg*50);valTxt=(v>=0?'+':'')+v.toFixed(2)+'R';}
+    else if(m==='pf'){const p=isFinite(s.pf)?s.pf:3,d=Math.max(-1,Math.min(2,p-1));pos=d>=0;pct=Math.abs(d)/2*50;valTxt=isFinite(s.pf)?s.pf.toFixed(2):'∞';}
+    else{const v=s.sumR;pos=v>=0;pct=Math.min(50,Math.abs(v)/mSum*50);valTxt=(v>=0?'+':'')+v.toFixed(1)+'R';}
     const win=(s.winAll==null?0:s.winAll*100).toFixed(0);
-    const valTxt=(v>=0?'+':'')+v.toFixed(2)+'R';
     const meta=`${s.n} · ${win}% win · ${(s.sumR>=0?'+':'')+s.sumR.toFixed(1)}R total`;
-    const fill=`<div class="bzero"></div><div class="bfill ${pos?'p':'n'}" style="${pos?'left:50%':'right:50%'};width:${pct.toFixed(1)}%"></div>`;
+    const fill=mode==='lr'
+      ?`<div class="bmid"></div><div class="bfill ${pos?'p':'n'}" style="left:0;width:${pct.toFixed(1)}%"></div>`
+      :`<div class="bzero"></div><div class="bfill ${pos?'p':'n'}" style="${pos?'left:50%':'right:50%'};width:${pct.toFixed(1)}%"></div>`;
     return `<div class="bar"><div class="bl"><span class="bn">${s.label}</span><span class="bm">${meta}</span></div>`
       +`<div class="btrack">${fill}</div><div class="bv ${pos?'pos':'neg'}">${valTxt}</div></div>`;
   }).join('');
@@ -1160,7 +1168,7 @@ document.addEventListener('click',e=>{const b=e.target.closest('#rdistTabs butto
 $('#rdistOpt').onchange=e=>{RDIST_OPT=e.target.value;renderResultRadar();};
 document.addEventListener('click',e=>{const b=e.target.closest('#metricDock button');if(!b)return;
   METRIC=b.dataset.m;document.querySelectorAll('#metricDock button').forEach(x=>x.classList.toggle('on',x.dataset.m===METRIC));
-  renderTiming();renderTOD();renderFactor();});
+  renderTiming();renderTOD();renderFactor();renderCycleAnalysis();});
 (function(){const dock=document.getElementById('metricDock');if(!dock)return;
   const secs=[...document.querySelectorAll('.metricsec')];if(!secs.length)return;
   const vis=new Set();
