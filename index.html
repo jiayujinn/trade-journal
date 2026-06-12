@@ -195,9 +195,8 @@
   .pflag.pred{opacity:.4}
   .cyc{position:absolute;inset:0;border-radius:9px;pointer-events:none}
   #calPanel{position:relative}
-  .legendbar{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-top:22px}
-  .legendbar .legend{margin-top:0;flex:1}
-  .lfilters{display:flex;gap:8px;flex-shrink:0}
+  .legend.lbar{margin-top:22px;align-items:center}
+  .lfilters{display:flex;gap:8px;flex-shrink:0;margin-left:auto}
   .lfilters button{background:transparent;border:none;padding:0;font-size:15px;line-height:1;color:var(--muted);opacity:.4;cursor:pointer}
   .lfilters button:hover{border:none;color:var(--accent)}
   .lfilters button.on{opacity:1;color:var(--accent)}
@@ -320,15 +319,13 @@
     </div>
     <div class="wdhead"><span>Mo</span><span>Tu</span><span>We</span><span>Th</span><span>Fr</span><span>Sa</span><span>Su</span><span>Wk</span></div>
     <div class="cal" id="cal"></div>
-    <div class="legendbar">
-      <div class="legend">
-        <span><span class="dot" style="background:var(--high)"></span>High-impact USD · NFP / CPI / PPI / FOMC</span>
-        <span><span class="dot" style="background:var(--med)"></span>Other red events · ISM / AHE / Unemployment / ADP</span>
-        <span><span class="dot" style="background:var(--win)"></span>Green day</span>
-        <span><span class="dot" style="background:var(--loss)"></span>Red day</span>
-        <span style="color:var(--blue)">▢ Today</span>
-        <span>Tap a day for details</span>
-      </div>
+    <div class="legend lbar">
+      <span><span class="dot" style="background:var(--high)"></span>High-impact USD · NFP / CPI / PPI / FOMC</span>
+      <span><span class="dot" style="background:var(--med)"></span>Other red events · ISM / AHE / Unemployment / ADP</span>
+      <span><span class="dot" style="background:var(--win)"></span>Green day</span>
+      <span><span class="dot" style="background:var(--loss)"></span>Red day</span>
+      <span style="color:var(--blue)">▢ Today</span>
+      <span>Tap a day for details</span>
       <div class="lfilters" id="lfilters"></div>
     </div>
   </div>
