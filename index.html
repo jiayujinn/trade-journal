@@ -438,9 +438,9 @@ let MOODS=(JSON.parse(localStorage.getItem('moodOpts')||'null')||['Calm','Confid
 localStorage.setItem('moodOpts',JSON.stringify(MOODS));
 let FILTERS=Object.assign({news:true,period:true,diary:true},JSON.parse(localStorage.getItem('calFilters')||'{}'));
 const FILTDEF=[['period','☪\uFE0E']];
-const PHASE_BG={men:'rgba(244,63,94,.05)',fol:'rgba(96,165,250,.045)',ovu:'rgba(167,139,250,.06)',lut:'rgba(167,139,250,.045)',pms:'rgba(225,95,135,.055)'};
-const PHASE_NAME={men:'月經期:低谷與平靜',fol:'濾泡期:陽光自信期',ovu:'排卵期:感性高峰與魅力',lut:'黃體期:暴風雨前的多愁善感'};
-function phaseName(ds){const p=CYC.phase[ds]==='pms'?'lut':CYC.phase[ds];return PHASE_NAME[p]||(CYC.predicted.has(ds)?'預測月經期':'');}
+const PHASE_BG={men:'rgba(244,63,94,.05)',fol:'rgba(96,165,250,.045)',ovu:'rgba(167,139,250,.06)',lut:'rgba(167,139,250,.045)',pms:'rgba(205,125,215,.055)'};
+const PHASE_NAME={men:'月經期:低谷與平靜',fol:'濾泡期:陽光自信期',ovu:'排卵期:感性高峰與魅力',lut:'黃體期:暴風雨前的多愁善感',pms:'黃體期·PMS:情緒風暴'};
+function phaseName(ds){return PHASE_NAME[CYC.phase[ds]]||(CYC.predicted.has(ds)?'預測月經期':'');}
 const lds=d=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
 let CYC={phase:{},predicted:new Set(),nextStart:null,avgCycle:28,starts:[]};
 function phaseForDi(di){
