@@ -209,7 +209,8 @@
   #lgPeriod.pon,#lgPeriod.pon:hover{border-color:var(--high);color:var(--high);background:var(--panel2)}
   .lglabel{display:block;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-top:12px}
   #dtip .dlh{display:block;font-size:9.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:2px}
-  #dtip .dlphase{color:var(--accent);font-size:11px;font-weight:600;margin-bottom:7px;padding-bottom:6px;border-bottom:1px solid var(--border)}
+  #dtip .dlphase{color:var(--accent);font-size:11px;font-weight:600}
+  #dtip .dlphase.sep{margin-bottom:7px;padding-bottom:6px;border-bottom:1px solid var(--border)}
   .cyccall{margin-top:14px;padding-top:12px;border-top:1px solid var(--border);font-size:12px;color:var(--muted)}
   .cyccall b.pos{color:var(--win)}
   .cyccall b.neg{color:var(--loss)}
@@ -333,7 +334,7 @@
   </div>
 
   <div class="panel" id="cycPanel">
-    <div class="seclabel"><span class="eyebrow">週期分析</span></div>
+    <div class="seclabel"><span class="eyebrow">Cycle analysis</span></div>
     <div class="help" id="cycNote" style="margin-bottom:12px"></div>
     <div id="cycBody"></div>
   </div>
@@ -456,7 +457,7 @@ function renderCycleAnalysis(){
   const body=$('#cycBody'),note=$('#cycNote');if(!body)return;
   if(!CYC.starts||!CYC.starts.length){
     if(note)note.textContent='';
-    body.innerHTML='<div class="help" style="color:var(--faint)">在月曆上標記至少一次生理期,即可解鎖週期分析。</div>';
+    body.innerHTML='<div class="help" style="color:var(--faint)">Log at least one period on the calendar to unlock cycle analysis.</div>';
     return;
   }
   const order=[['men','月經期'],['fol','濾泡期'],['ovu','排卵期'],['lut','黃體期']];
@@ -469,12 +470,12 @@ function renderCycleAnalysis(){
   const stats=order.map(([k,label])=>{const a=agg(groups[k]);return{k,label,n:a.n,winAll:a.winAll,avgR:a.avgR,sumR:a.sumR};});
   const mAvg=Math.max(1e-9,...stats.map(s=>Math.abs(s.avgR)));
   const total=stats.reduce((s,x)=>s+x.n,0);
-  if(note)note.innerHTML=`依你記錄的生理期推算(${CYC.avgCycle} 天週期),涵蓋 ${total} 筆交易。記錄越多週期,推算越準。`;
+  if(note)note.innerHTML=`Estimated from your logged periods (${CYC.avgCycle}-day cycle) across ${total} trades. Accuracy improves as you log more cycles.`;
   const bars=stats.map(s=>{
     const v=s.avgR,pos=v>=0,pct=Math.min(50,Math.abs(v)/mAvg*50);
     const win=(s.winAll==null?0:s.winAll*100).toFixed(0);
     const valTxt=(v>=0?'+':'')+v.toFixed(2)+'R';
-    const meta=`${s.n} 筆 · 勝率 ${win}% · 總 ${(s.sumR>=0?'+':'')+s.sumR.toFixed(1)}R`;
+    const meta=`${s.n} · ${win}% win · ${(s.sumR>=0?'+':'')+s.sumR.toFixed(1)}R total`;
     const fill=`<div class="bzero"></div><div class="bfill ${pos?'p':'n'}" style="${pos?'left:50%':'right:50%'};width:${pct.toFixed(1)}%"></div>`;
     return `<div class="bar"><div class="bl"><span class="bn">${s.label}</span><span class="bm">${meta}</span></div>`
       +`<div class="btrack">${fill}</div><div class="bv ${pos?'pos':'neg'}">${valTxt}</div></div>`;
@@ -483,10 +484,10 @@ function renderCycleAnalysis(){
   let call='';
   if(withData.length){
     const best=[...withData].sort((a,b)=>b.avgR-a.avgR)[0],worst=[...withData].sort((a,b)=>a.avgR-b.avgR)[0];
-    call=`<div class="cyccall">最佳:<b class="pos">${best.label}</b>(平均 ${(best.avgR>=0?'+':'')+best.avgR.toFixed(2)}R)· 注意:<b class="neg">${worst.label}</b>(平均 ${(worst.avgR>=0?'+':'')+worst.avgR.toFixed(2)}R)</div>`;
+    call=`<div class="cyccall">Best: <b class="pos">${best.label}</b> (avg ${(best.avgR>=0?'+':'')+best.avgR.toFixed(2)}R) · Watch: <b class="neg">${worst.label}</b> (avg ${(worst.avgR>=0?'+':'')+worst.avgR.toFixed(2)}R)</div>`;
   }
   const moodLine=order.map(([k,label])=>{const m=topMood(k);return m?`<span class="cmood"><span class="cmk">${label}</span>${esc(m)}</span>`:'';}).filter(Boolean).join('');
-  body.innerHTML=bars+call+(moodLine?`<div class="cmoodrow"><span class="cmoodlbl">主要心情</span>${moodLine}</div>`:'');
+  body.innerHTML=bars+call+(moodLine?`<div class="cmoodrow"><span class="cmoodlbl">Top mood</span>${moodLine}</div>`:'');
 }
 
 function sbInit(){
@@ -1103,24 +1104,28 @@ $('#journalTz').onchange=renderAll;
 const ftip=document.createElement('div');ftip.id='ftip';document.body.appendChild(ftip);
 const dtip=document.createElement('div');dtip.id='dtip';document.body.appendChild(dtip);
 function dayLogHtml(lg,pn){
-  let h='';
-  if(pn)h+=`<div class="dlphase">${esc(pn)}</div>`;
+  let body='';
   const anyMood=lg.mood_pre||lg.mood_mid||lg.mood_post;
   if(anyMood){
     const rows=[['Pre-market',lg.mood_pre],['Intraday',lg.mood_mid],['Post-market',lg.mood_post]]
       .map(([k,v])=>`<div><span>${k}</span><b>${v?esc(cleanMood(v)):'—'}</b></div>`).join('');
-    h+=`<div class="dlm">${rows}</div>`;
+    body+=`<div class="dlm">${rows}</div>`;
   }
   let brd=!!anyMood;
-  if(lg.diary){h+=`<div class="dld${brd?' brd':''}"><span class="dlh">Mood diary</span>${esc(lg.diary)}</div>`;brd=true;}
-  if(lg.trade_diary){h+=`<div class="dld${brd?' brd':''}"><span class="dlh">Trade diary</span>${esc(lg.trade_diary)}</div>`;}
-  return h;
+  if(lg.diary){body+=`<div class="dld${brd?' brd':''}"><span class="dlh">Mood diary</span>${esc(lg.diary)}</div>`;brd=true;}
+  if(lg.trade_diary){body+=`<div class="dld${brd?' brd':''}"><span class="dlh">Trade diary</span>${esc(lg.trade_diary)}</div>`;}
+  let h='';
+  if(pn)h+=`<div class="dlphase${body?' sep':''}">${esc(pn)}</div>`;
+  return h+body;
 }
 document.addEventListener('mousemove',e=>{
   const cell=e.target.closest('.day');
-  const lg=cell&&cell.dataset.ds?LOG[cell.dataset.ds]:null;
-  if(lg&&(lg.mood_pre||lg.mood_mid||lg.mood_post||lg.diary||lg.trade_diary)){
-    dtip.innerHTML=dayLogHtml(lg,phaseName(cell.dataset.ds));dtip.style.display='block';
+  const ds=cell&&cell.dataset.ds?cell.dataset.ds:null;
+  const lg=ds?LOG[ds]:null;
+  const pn=ds?phaseName(ds):'';
+  const hasLog=lg&&(lg.mood_pre||lg.mood_mid||lg.mood_post||lg.diary||lg.trade_diary);
+  if(pn||hasLog){
+    dtip.innerHTML=dayLogHtml(lg||{},pn);dtip.style.display='block';
     let left=e.clientX+14,top=e.clientY+16;
     if(left+dtip.offsetWidth>window.innerWidth-8)left=e.clientX-dtip.offsetWidth-14;
     if(top+dtip.offsetHeight>window.innerHeight-8)top=e.clientY-dtip.offsetHeight-16;
