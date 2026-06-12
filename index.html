@@ -203,7 +203,12 @@
   .lfilters button.on{opacity:1;color:var(--accent)}
   .logrow{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:10px 0}
   .lgm{font-size:11px;color:var(--muted);display:flex;flex-direction:column;gap:4px}
-  #lgDiary{width:100%;background:var(--panel2);border:1px solid var(--border);border-radius:8px;color:var(--text);padding:8px;font-family:inherit;font-size:12px;margin-top:6px;resize:vertical}
+  #lgDiary,#lgTradeDiary{width:100%;background:var(--panel2);border:1px solid var(--border);border-radius:8px;color:var(--text);padding:8px;font-family:inherit;font-size:12px;margin-top:4px;resize:vertical}
+  #lgPeriod{background:var(--panel2);border:1px solid var(--border);color:var(--muted);font-size:16px;line-height:1;padding:7px 13px}
+  #lgPeriod:hover{border-color:var(--border2);color:var(--text)}
+  #lgPeriod.pon,#lgPeriod.pon:hover{border-color:var(--high);color:var(--high);background:var(--panel2)}
+  .lglabel{display:block;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-top:12px}
+  #dtip .dlh{display:block;font-size:9.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:2px}
   #authBox{display:flex;align-items:center;gap:8px}
   #ftip.diary{width:max-content;max-width:min(380px,82vw);white-space:pre-wrap}
   #dtip{position:fixed;display:none;z-index:120;max-width:min(320px,80vw);background:#16140f;border:1px solid var(--border2);
@@ -451,10 +456,10 @@ async function saveLog(ds,patch,statEl){
   const g=LOG[ds];
   const row={user_id:SB_USER.id,log_date:ds,period:!!g.period,
     mood_pre:g.mood_pre||null,mood_mid:g.mood_mid||null,mood_post:g.mood_post||null,
-    diary:(g.diary||'').trim()||null,updated_at:new Date().toISOString()};
-  if(statEl)statEl.textContent='儲存中…';
+    diary:(g.diary||'').trim()||null,trade_diary:(g.trade_diary||'').trim()||null,updated_at:new Date().toISOString()};
+  if(statEl)statEl.textContent='Saving…';
   const{error}=await sb.from('daily_log').upsert(row,{onConflict:'user_id,log_date'});
-  if(statEl)statEl.textContent=error?('⚠ '+error.message):'✓ 已儲存';
+  if(statEl)statEl.textContent=error?('⚠ '+error.message):'✓ Saved';
   if(!error){recomputeCycle();renderCal();}
 }
 function recomputeCycle(){
@@ -948,14 +953,17 @@ function openDay(di,day){
       <span class="eyebrow">Daily log${phName?' · '+phName:''}</span><span id="lgStat" class="help"></span></div>
     ${SB_USER?`
     <div class="logrow">
-      <button id="lgPeriod" class="${lg.period?'acc':''}" title="${lg.period?'已標記生理期(按一下取消)':'標記生理期'}">🩸</button>
+      <button id="lgPeriod" class="${lg.period?'pon':''}" title="${lg.period?'Period marked (tap to clear)':'Mark period'}">☪\uFE0E</button>
     </div>
     <div class="logrow">
       ${moodSel('mood_pre','Pre-market')}${moodSel('mood_mid','Intraday')}${moodSel('mood_post','Post-market')}
-      <button id="lgMoodEdit" title="編輯心情清單">✎</button>
+      <button id="lgMoodEdit" title="Edit mood list">✎</button>
     </div>
-    <textarea id="lgDiary" rows="4" placeholder="日記…">${esc(lg.diary||'')}</textarea>
-    `:`<div class="help">登入後即可記錄生理期 / 心情 / 日記。<button id="lgLogin" class="acc" style="margin-left:8px">Google 登入</button></div>`}`;
+    <label class="lglabel">Mood diary</label>
+    <textarea id="lgDiary" rows="3" placeholder="Mood diary…">${esc(lg.diary||'')}</textarea>
+    <label class="lglabel">Trade diary</label>
+    <textarea id="lgTradeDiary" rows="3" placeholder="Trade diary…">${esc(lg.trade_diary||'')}</textarea>
+    `:`<div class="help">Sign in to log period / mood / diary.<button id="lgLogin" class="acc" style="margin-left:8px">Sign in</button></div>`}`;
   $('#modal').innerHTML=`
     <div class="mh"><div><h2>${day.getFullYear()}/${String(day.getMonth()+1).padStart(2,'0')}/${String(day.getDate()).padStart(2,'0')}</h2>
       <div class="help">${trs.length} trades · win ${a.win!=null?(a.win*100).toFixed(0)+'%':'—'} · net <span class="${rcls(a.sumR)}">${a.sumR>=0?'+':''}${a.sumR.toFixed(1)}R</span></div></div>
@@ -969,12 +977,14 @@ function openDay(di,day){
     $('#lgPeriod').onclick=()=>{saveLog(ds,{period:!(LOG[ds]&&LOG[ds].period)},stat).then(()=>openDay(di,day));};
     document.querySelectorAll('#modal select[data-f]').forEach(s=>{s.onchange=()=>saveLog(ds,{[s.dataset.f]:s.value||null},stat);});
     $('#lgMoodEdit').onclick=()=>{
-      const v=prompt('編輯心情選項(用逗號分隔,格式:emoji 名稱)',MOODS.join(', '));
+      const v=prompt('Edit mood options (comma-separated)',MOODS.join(', '));
       if(v==null)return;
       MOODS=v.split(/[,，]/).map(s=>s.trim()).filter(Boolean);
       localStorage.setItem('moodOpts',JSON.stringify(MOODS));openDay(di,day);};
     const ta=$('#lgDiary');let dt;
     ta.oninput=()=>{clearTimeout(dt);dt=setTimeout(()=>saveLog(ds,{diary:ta.value},stat),700);};
+    const tta=$('#lgTradeDiary');let dt2;
+    tta.oninput=()=>{clearTimeout(dt2);dt2=setTimeout(()=>saveLog(ds,{trade_diary:tta.value},stat),700);};
   }else if($('#lgLogin')){
     $('#lgLogin').onclick=()=>sb&&sb.auth.signInWithOAuth({provider:'google',options:{redirectTo:location.origin+location.pathname}});
   }
@@ -1033,13 +1043,15 @@ function dayLogHtml(lg){
       .map(([k,v])=>`<div><span>${k}</span><b>${v?esc(cleanMood(v)):'—'}</b></div>`).join('');
     h+=`<div class="dlm">${rows}</div>`;
   }
-  if(lg.diary)h+=`<div class="dld${anyMood?' brd':''}">${esc(lg.diary)}</div>`;
+  let brd=!!anyMood;
+  if(lg.diary){h+=`<div class="dld${brd?' brd':''}"><span class="dlh">Mood diary</span>${esc(lg.diary)}</div>`;brd=true;}
+  if(lg.trade_diary){h+=`<div class="dld${brd?' brd':''}"><span class="dlh">Trade diary</span>${esc(lg.trade_diary)}</div>`;}
   return h;
 }
 document.addEventListener('mousemove',e=>{
   const cell=e.target.closest('.day');
   const lg=cell&&cell.dataset.ds?LOG[cell.dataset.ds]:null;
-  if(lg&&(lg.mood_pre||lg.mood_mid||lg.mood_post||lg.diary)){
+  if(lg&&(lg.mood_pre||lg.mood_mid||lg.mood_post||lg.diary||lg.trade_diary)){
     dtip.innerHTML=dayLogHtml(lg);dtip.style.display='block';
     let left=e.clientX+14,top=e.clientY+16;
     if(left+dtip.offsetWidth>window.innerWidth-8)left=e.clientX-dtip.offsetWidth-14;
