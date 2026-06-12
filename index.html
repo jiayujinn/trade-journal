@@ -507,6 +507,7 @@ document.addEventListener('click',e=>{
   localStorage.setItem('calFilters',JSON.stringify(FILTERS));
   renderFilters();renderCal();
 });
+let _rzt;window.addEventListener('resize',()=>{clearTimeout(_rzt);_rzt=setTimeout(()=>{try{renderCal();}catch(e){}},200);});
 /* ===== end Supabase block ===== */
 
 // news
@@ -889,10 +890,12 @@ function renderCal(){
       const el=document.createElement('div');
       el.className='day'+(day.getMonth()!==mo?' other':'')+(di===todayDi?' today':'')+' has';
       const ds=lds(day);const lg=LOG[ds]||null;
-      el.setAttribute('style',tint(a.sumR,a.n));
-      el.dataset.ds=ds;
+      const isMobile=window.matchMedia('(max-width:560px)').matches;
       const ph=FILTERS.period?CYC.phase[ds]:null;
-      const cyc=(ph&&PHASE_BG[ph])?`<div class="cyc" style="background:${PHASE_BG[ph]}"></div>`:'';
+      const showCyc=!!(ph&&PHASE_BG[ph])&&!isMobile;
+      const cyc=showCyc?`<div class="cyc" style="background:${PHASE_BG[ph]}"></div>`:'';
+      el.setAttribute('style',showCyc?'':tint(a.sumR,a.n));
+      el.dataset.ds=ds;
       let dots='';
       if(evs.length)dots=`<span class="nd"></span>`;else if(evm.length)dots=`<span class="ndm"></span>`;
       let news=dots?`<div class="news">${dots}</div>`:'';
