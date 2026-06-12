@@ -1,230 +1,337 @@
 [
-{
-"title": "Non-Farm Employment Change",
-"country": "USD",
-"date": "2026-01-02T08:30:00-05:00",
-"impact": "High"
-},
-{
-"title": "ISM Manufacturing PMI",
-"country": "USD",
-"date": "2026-01-02T10:00:00-05:00",
-"impact": "High"
-},
-{
-"title": "ISM Services PMI",
-"country": "USD",
-"date": "2026-01-06T10:00:00-05:00",
-"impact": "High"
-},
-{
-"title": "CPI m/m",
-"country": "USD",
-"date": "2026-01-13T08:30:00-05:00",
-"impact": "High"
-},
-{
-"title": "FOMC Statement / Federal Funds Rate",
-"country": "USD",
-"date": "2026-01-28T14:00:00-05:00",
-"impact": "High"
-},
-{
-"title": "ISM Manufacturing PMI",
-"country": "USD",
-"date": "2026-02-02T10:00:00-05:00",
-"impact": "High"
-},
-{
-"title": "ISM Services PMI",
-"country": "USD",
-"date": "2026-02-04T10:00:00-05:00",
-"impact": "High"
-},
-{
-"title": "Non-Farm Employment Change",
-"country": "USD",
-"date": "2026-02-06T08:30:00-05:00",
-"impact": "High"
-},
-{
-"title": "CPI m/m",
-"country": "USD",
-"date": "2026-02-11T08:30:00-05:00",
-"impact": "High"
-},
-{
-"title": "ISM Manufacturing PMI",
-"country": "USD",
-"date": "2026-03-02T10:00:00-05:00",
-"impact": "High"
-},
-{
-"title": "ISM Services PMI",
-"country": "USD",
-"date": "2026-03-04T10:00:00-05:00",
-"impact": "High"
-},
-{
-"title": "Non-Farm Employment Change",
-"country": "USD",
-"date": "2026-03-06T08:30:00-05:00",
-"impact": "High"
-},
-{
-"title": "CPI m/m",
-"country": "USD",
-"date": "2026-03-11T08:30:00-04:00",
-"impact": "High"
-},
-{
-"title": "PPI m/m",
-"country": "USD",
-"date": "2026-03-18T08:30:00-04:00",
-"impact": "High"
-},
-{
-"title": "FOMC Statement / Federal Funds Rate",
-"country": "USD",
-"date": "2026-03-18T14:00:00-04:00",
-"impact": "High"
-},
-{
-"title": "ISM Manufacturing PMI",
-"country": "USD",
-"date": "2026-04-01T10:00:00-04:00",
-"impact": "High"
-},
-{
-"title": "Non-Farm Employment Change",
-"country": "USD",
-"date": "2026-04-03T08:30:00-04:00",
-"impact": "High"
-},
-{
-"title": "ISM Services PMI",
-"country": "USD",
-"date": "2026-04-03T10:00:00-04:00",
-"impact": "High"
-},
-{
-"title": "CPI m/m",
-"country": "USD",
-"date": "2026-04-10T08:30:00-04:00",
-"impact": "High"
-},
-{
-"title": "PPI m/m",
-"country": "USD",
-"date": "2026-04-14T08:30:00-04:00",
-"impact": "High"
-},
-{
-"title": "FOMC Statement / Federal Funds Rate",
-"country": "USD",
-"date": "2026-04-29T14:00:00-04:00",
-"impact": "High"
-},
-{
-"title": "Non-Farm Employment Change",
-"country": "USD",
-"date": "2026-05-01T08:30:00-04:00",
-"impact": "High"
-},
-{
-"title": "ISM Manufacturing PMI",
-"country": "USD",
-"date": "2026-05-01T10:00:00-04:00",
-"impact": "High"
-},
-{
-"title": "ISM Services PMI",
-"country": "USD",
-"date": "2026-05-05T10:00:00-04:00",
-"impact": "High"
-},
-{
-"title": "CPI m/m",
-"country": "USD",
-"date": "2026-05-12T08:30:00-04:00",
-"impact": "High"
-},
-{
-"title": "PPI m/m",
-"country": "USD",
-"date": "2026-05-13T08:30:00-04:00",
-"impact": "High"
-},
-{
-"title": "ISM Manufacturing PMI",
-"country": "USD",
-"date": "2026-06-01T10:00:00-04:00",
-"impact": "High"
-},
-{
-"title": "ISM Services PMI",
-"country": "USD",
-"date": "2026-06-03T10:00:00-04:00",
-"impact": "High"
-},
-{
-"title": "Non-Farm Employment Change",
-"country": "USD",
-"date": "2026-06-05T08:30:00-04:00",
-"impact": "High"
-},
-{
-"title": "CPI m/m",
-"country": "USD",
-"date": "2026-06-10T08:30:00-04:00",
-"impact": "High"
-},
-{
-"title": "PPI m/m",
-"country": "USD",
-"date": "2026-06-11T08:30:00-04:00",
-"impact": "High"
-},
-{
-"title": "FOMC Statement / Federal Funds Rate",
-"country": "USD",
-"date": "2026-06-17T14:00:00-04:00",
-"impact": "High"
-},
-{
-"title": "Non-Farm Employment Change",
-"country": "USD",
-"date": "2026-07-03T08:30:00-04:00",
-"impact": "High"
-},
-{
-"title": "FOMC Statement / Federal Funds Rate",
-"country": "USD",
-"date": "2026-07-29T14:00:00-04:00",
-"impact": "High"
-},
-{
-"title": "Non-Farm Employment Change",
-"country": "USD",
-"date": "2026-08-07T08:30:00-04:00",
-"impact": "High"
-},
-{
-"title": "FOMC Statement / Federal Funds Rate",
-"country": "USD",
-"date": "2026-09-16T14:00:00-04:00",
-"impact": "High"
-},
-{
-"title": "FOMC Statement / Federal Funds Rate",
-"country": "USD",
-"date": "2026-10-28T14:00:00-04:00",
-"impact": "High"
-},
-{
-"title": "FOMC Statement / Federal Funds Rate",
-"country": "USD",
-"date": "2026-12-09T14:00:00-05:00",
-"impact": "High"
-}
+  {
+    "title": "Non-Farm Employment Change",
+    "country": "USD",
+    "date": "2026-01-02T08:30:00-05:00",
+    "impact": "High"
+  },
+  {
+    "title": "ISM Manufacturing PMI",
+    "country": "USD",
+    "date": "2026-01-02T10:00:00-05:00",
+    "impact": "High"
+  },
+  {
+    "title": "ISM Services PMI",
+    "country": "USD",
+    "date": "2026-01-06T10:00:00-05:00",
+    "impact": "High"
+  },
+  {
+    "title": "CPI m/m",
+    "country": "USD",
+    "date": "2026-01-13T08:30:00-05:00",
+    "impact": "High"
+  },
+  {
+    "title": "PPI m/m",
+    "country": "USD",
+    "date": "2026-01-14T08:30:00-05:00",
+    "impact": "High"
+  },
+  {
+    "title": "FOMC Statement / Federal Funds Rate",
+    "country": "USD",
+    "date": "2026-01-28T14:00:00-05:00",
+    "impact": "High"
+  },
+  {
+    "title": "ISM Manufacturing PMI",
+    "country": "USD",
+    "date": "2026-02-02T10:00:00-05:00",
+    "impact": "High"
+  },
+  {
+    "title": "ISM Services PMI",
+    "country": "USD",
+    "date": "2026-02-04T10:00:00-05:00",
+    "impact": "High"
+  },
+  {
+    "title": "Non-Farm Employment Change",
+    "country": "USD",
+    "date": "2026-02-06T08:30:00-05:00",
+    "impact": "High"
+  },
+  {
+    "title": "CPI m/m",
+    "country": "USD",
+    "date": "2026-02-11T08:30:00-05:00",
+    "impact": "High"
+  },
+  {
+    "title": "ISM Manufacturing PMI",
+    "country": "USD",
+    "date": "2026-03-02T10:00:00-05:00",
+    "impact": "High"
+  },
+  {
+    "title": "ISM Services PMI",
+    "country": "USD",
+    "date": "2026-03-04T10:00:00-05:00",
+    "impact": "High"
+  },
+  {
+    "title": "Non-Farm Employment Change",
+    "country": "USD",
+    "date": "2026-03-06T08:30:00-05:00",
+    "impact": "High"
+  },
+  {
+    "title": "CPI m/m",
+    "country": "USD",
+    "date": "2026-03-11T08:30:00-04:00",
+    "impact": "High"
+  },
+  {
+    "title": "PPI m/m",
+    "country": "USD",
+    "date": "2026-03-18T08:30:00-04:00",
+    "impact": "High"
+  },
+  {
+    "title": "FOMC Statement / Federal Funds Rate",
+    "country": "USD",
+    "date": "2026-03-18T14:00:00-04:00",
+    "impact": "High"
+  },
+  {
+    "title": "ISM Manufacturing PMI",
+    "country": "USD",
+    "date": "2026-04-01T10:00:00-04:00",
+    "impact": "High"
+  },
+  {
+    "title": "Non-Farm Employment Change",
+    "country": "USD",
+    "date": "2026-04-03T08:30:00-04:00",
+    "impact": "High"
+  },
+  {
+    "title": "ISM Services PMI",
+    "country": "USD",
+    "date": "2026-04-03T10:00:00-04:00",
+    "impact": "High"
+  },
+  {
+    "title": "CPI m/m",
+    "country": "USD",
+    "date": "2026-04-10T08:30:00-04:00",
+    "impact": "High"
+  },
+  {
+    "title": "PPI m/m",
+    "country": "USD",
+    "date": "2026-04-14T08:30:00-04:00",
+    "impact": "High"
+  },
+  {
+    "title": "FOMC Statement / Federal Funds Rate",
+    "country": "USD",
+    "date": "2026-04-29T14:00:00-04:00",
+    "impact": "High"
+  },
+  {
+    "title": "Non-Farm Employment Change",
+    "country": "USD",
+    "date": "2026-05-01T08:30:00-04:00",
+    "impact": "High"
+  },
+  {
+    "title": "ISM Manufacturing PMI",
+    "country": "USD",
+    "date": "2026-05-01T10:00:00-04:00",
+    "impact": "High"
+  },
+  {
+    "title": "ISM Services PMI",
+    "country": "USD",
+    "date": "2026-05-05T10:00:00-04:00",
+    "impact": "High"
+  },
+  {
+    "title": "CPI m/m",
+    "country": "USD",
+    "date": "2026-05-12T08:30:00-04:00",
+    "impact": "High"
+  },
+  {
+    "title": "PPI m/m",
+    "country": "USD",
+    "date": "2026-05-13T08:30:00-04:00",
+    "impact": "High"
+  },
+  {
+    "title": "ISM Manufacturing PMI",
+    "country": "USD",
+    "date": "2026-06-01T10:00:00-04:00",
+    "impact": "High"
+  },
+  {
+    "title": "ISM Services PMI",
+    "country": "USD",
+    "date": "2026-06-03T10:00:00-04:00",
+    "impact": "High"
+  },
+  {
+    "title": "Non-Farm Employment Change",
+    "country": "USD",
+    "date": "2026-06-05T08:30:00-04:00",
+    "impact": "High"
+  },
+  {
+    "title": "CPI m/m",
+    "country": "USD",
+    "date": "2026-06-10T08:30:00-04:00",
+    "impact": "High"
+  },
+  {
+    "title": "PPI m/m",
+    "country": "USD",
+    "date": "2026-06-11T08:30:00-04:00",
+    "impact": "High"
+  },
+  {
+    "title": "FOMC Statement / Federal Funds Rate",
+    "country": "USD",
+    "date": "2026-06-17T14:00:00-04:00",
+    "impact": "High"
+  },
+  {
+    "title": "Non-Farm Employment Change",
+    "country": "USD",
+    "date": "2026-07-03T08:30:00-04:00",
+    "impact": "High"
+  },
+  {
+    "title": "CPI m/m",
+    "country": "USD",
+    "date": "2026-07-14T08:30:00-04:00",
+    "impact": "High"
+  },
+  {
+    "title": "PPI m/m",
+    "country": "USD",
+    "date": "2026-07-15T08:30:00-04:00",
+    "impact": "High"
+  },
+  {
+    "title": "FOMC Statement / Federal Funds Rate",
+    "country": "USD",
+    "date": "2026-07-29T14:00:00-04:00",
+    "impact": "High"
+  },
+  {
+    "title": "Non-Farm Employment Change",
+    "country": "USD",
+    "date": "2026-08-07T08:30:00-04:00",
+    "impact": "High"
+  },
+  {
+    "title": "CPI m/m",
+    "country": "USD",
+    "date": "2026-08-12T08:30:00-04:00",
+    "impact": "High"
+  },
+  {
+    "title": "PPI m/m",
+    "country": "USD",
+    "date": "2026-08-13T08:30:00-04:00",
+    "impact": "High",
+    "estimated": true
+  },
+  {
+    "title": "Non-Farm Employment Change",
+    "country": "USD",
+    "date": "2026-09-04T08:30:00-04:00",
+    "impact": "High"
+  },
+  {
+    "title": "CPI m/m",
+    "country": "USD",
+    "date": "2026-09-11T08:30:00-04:00",
+    "impact": "High"
+  },
+  {
+    "title": "PPI m/m",
+    "country": "USD",
+    "date": "2026-09-15T08:30:00-04:00",
+    "impact": "High",
+    "estimated": true
+  },
+  {
+    "title": "FOMC Statement / Federal Funds Rate",
+    "country": "USD",
+    "date": "2026-09-16T14:00:00-04:00",
+    "impact": "High"
+  },
+  {
+    "title": "Non-Farm Employment Change",
+    "country": "USD",
+    "date": "2026-10-02T08:30:00-04:00",
+    "impact": "High"
+  },
+  {
+    "title": "CPI m/m",
+    "country": "USD",
+    "date": "2026-10-14T08:30:00-04:00",
+    "impact": "High"
+  },
+  {
+    "title": "PPI m/m",
+    "country": "USD",
+    "date": "2026-10-15T08:30:00-04:00",
+    "impact": "High",
+    "estimated": true
+  },
+  {
+    "title": "FOMC Statement / Federal Funds Rate",
+    "country": "USD",
+    "date": "2026-10-28T14:00:00-04:00",
+    "impact": "High"
+  },
+  {
+    "title": "Non-Farm Employment Change",
+    "country": "USD",
+    "date": "2026-11-06T08:30:00-05:00",
+    "impact": "High"
+  },
+  {
+    "title": "CPI m/m",
+    "country": "USD",
+    "date": "2026-11-10T08:30:00-05:00",
+    "impact": "High"
+  },
+  {
+    "title": "PPI m/m",
+    "country": "USD",
+    "date": "2026-11-12T08:30:00-05:00",
+    "impact": "High",
+    "estimated": true
+  },
+  {
+    "title": "Non-Farm Employment Change",
+    "country": "USD",
+    "date": "2026-12-04T08:30:00-05:00",
+    "impact": "High"
+  },
+  {
+    "title": "FOMC Statement / Federal Funds Rate",
+    "country": "USD",
+    "date": "2026-12-09T14:00:00-05:00",
+    "impact": "High"
+  },
+  {
+    "title": "CPI m/m",
+    "country": "USD",
+    "date": "2026-12-10T08:30:00-05:00",
+    "impact": "High"
+  },
+  {
+    "title": "PPI m/m",
+    "country": "USD",
+    "date": "2026-12-11T08:30:00-05:00",
+    "impact": "High",
+    "estimated": true
+  }
 ]

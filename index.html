@@ -1091,11 +1091,13 @@ document.addEventListener('click',e=>{const b=e.target.closest('#metricDock butt
   secs.forEach(s=>io.observe(s));})();
 ['#sheetId','#sheetName'].forEach(s=>$(s).onchange=loadAll);
 function mapEv(x){
-  const title=x.title||x.event||x.Name||'';
+  let title=x.title||x.event||x.Name||'';
+  const est=x.estimated===true||x.estimated==='true';
+  if(est)title='(Estimated) '+title;
   const cur=x.currency||x.Currency||((x.country==='US'||x.country==='USA')?'USD':x.country)||'';
   const impact=x.impact||x.Impact||'';
   let ds=String(x.date||x.Date||'').trim().replace(/^(\d{4})[.\/](\d{1,2})[.\/](\d{1,2})/,'$1-$2-$3').replace(' ','T');
-  return {title,currency:cur,impact,date:new Date(/[zZ]|[+\-]\d\d:?\d\d$/.test(ds)?ds:ds+'Z')};}
+  return {title,currency:cur,impact,estimated:est,date:new Date(/[zZ]|[+\-]\d\d:?\d\d$/.test(ds)?ds:ds+'Z')};}
 $('#histFile').onchange=e=>{const f=e.target.files[0];if(!f)return;const rd=new FileReader();
   rd.onload=()=>{try{const arr=JSON.parse(rd.result);if(!Array.isArray(arr))throw new Error('Not an events array (maybe an error message)');
     HIST=arr.map(mapEv);loadNews().then(()=>{renderAll();setStatus(`Loaded ${HIST.length} from file · red ${usdHigh().length} / amber ${usdMed().length}`,'ok');});}
