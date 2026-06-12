@@ -229,7 +229,7 @@
   #dtip .dld{white-space:pre-wrap;margin-top:6px}
   #dtip .dld.brd{border-top:1px solid var(--border);padding-top:6px}
   @media(max-width:560px){
-    .pflag,.cyc,.lfilters{display:none}
+    .lfilters button{font-size:17px}
   }
 </style>
 </head>
@@ -957,9 +957,8 @@ function renderCal(){
       const el=document.createElement('div');
       el.className='day'+(day.getMonth()!==mo?' other':'')+(di===todayDi?' today':'')+' has';
       const ds=lds(day);const lg=LOG[ds]||null;
-      const isMobile=window.matchMedia('(max-width:560px)').matches;
       const ph=FILTERS.period?CYC.phase[ds]:null;
-      const showCyc=!!(ph&&PHASE_BG[ph])&&!isMobile;
+      const showCyc=!!(ph&&PHASE_BG[ph]);
       const cyc=showCyc?`<div class="cyc" style="background:${PHASE_BG[ph]}"></div>`:'';
       el.setAttribute('style',showCyc?'':tint(a.sumR,a.n));
       el.dataset.ds=ds;
@@ -1121,6 +1120,7 @@ function dayLogHtml(lg,pn){
   return h+body;
 }
 document.addEventListener('mousemove',e=>{
+  if(window.matchMedia('(max-width:560px)').matches){if(dtip.style.display==='block')dtip.style.display='none';return;}
   const cell=e.target.closest('.day');
   const ds=cell&&cell.dataset.ds?cell.dataset.ds:null;
   const lg=ds?LOG[ds]:null;
