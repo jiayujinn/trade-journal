@@ -210,6 +210,13 @@
   .lglabel{display:block;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-top:12px}
   #dtip .dlh{display:block;font-size:9.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:2px}
   #dtip .dlphase{color:var(--accent);font-size:11px;font-weight:600;margin-bottom:7px;padding-bottom:6px;border-bottom:1px solid var(--border)}
+  .cyccall{margin-top:14px;padding-top:12px;border-top:1px solid var(--border);font-size:12px;color:var(--muted)}
+  .cyccall b.pos{color:var(--win)}
+  .cyccall b.neg{color:var(--loss)}
+  .cmoodrow{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-top:10px;font-size:11px;color:var(--text)}
+  .cmoodlbl{font-size:9.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--faint)}
+  .cmood{display:inline-flex;align-items:center;gap:6px}
+  .cmood .cmk{color:var(--muted);font-size:10px}
   #authBox{display:flex;align-items:center;gap:8px}
   #ftip.diary{width:max-content;max-width:min(380px,82vw);white-space:pre-wrap}
   #dtip{position:fixed;display:none;z-index:120;max-width:min(320px,80vw);background:#16140f;border:1px solid var(--border2);
@@ -325,6 +332,12 @@
     </div>
   </div>
 
+  <div class="panel" id="cycPanel">
+    <div class="seclabel"><span class="eyebrow">Cycle analysis</span></div>
+    <div class="help" id="cycNote" style="margin-bottom:12px"></div>
+    <div id="cycBody"></div>
+  </div>
+
   <div class="grid2 metricsec">
     <div class="panel">
       <div class="seclabel"><span class="eyebrow">News-relative</span></div>
@@ -428,7 +441,43 @@ const PHASE_BG={men:'rgba(244,63,94,.049)',fol:'rgba(96,165,250,.048)',ovu:'rgba
 const PHASE_NAME={men:'月經期:低谷與平靜',fol:'濾泡期:陽光自信期',ovu:'排卵期:感性高峰與魅力',lut:'黃體期:暴風雨前的多愁善感'};
 function phaseName(ds){return PHASE_NAME[CYC.phase[ds]]||(CYC.predicted.has(ds)?'預測月經期':'');}
 const lds=d=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
-let CYC={phase:{},predicted:new Set(),nextStart:null,avgCycle:28};
+let CYC={phase:{},predicted:new Set(),nextStart:null,avgCycle:28,starts:[]};
+function phaseForDi(di){
+  const st=CYC.starts;if(!st||!st.length)return null;
+  const L=CYC.avgCycle||28;
+  let best=st[0];for(const s of st)if(Math.abs(s-di)<Math.abs(best-di))best=s;
+  const dn=((((di-best)%L)+L)%L)+1,M=5;
+  if(dn<=M)return 'men';
+  if(dn<=L-16)return 'fol';
+  if(dn<=L-13)return 'ovu';
+  return 'lut';
+}
+function renderCycleAnalysis(){
+  const body=$('#cycBody'),note=$('#cycNote');if(!body)return;
+  if(!CYC.starts||!CYC.starts.length){
+    if(note)note.textContent='';
+    body.innerHTML='<div class="help" style="color:var(--faint)">Log at least one period on the calendar to unlock cycle analysis.</div>';
+    return;
+  }
+  const order=[['men','Menstrual'],['fol','Follicular'],['ovu','Ovulation'],['lut','Luteal']];
+  const groups={men:[],fol:[],ovu:[],lut:[]};
+  TRADES.forEach(t=>{const p=phaseForDi(t.di);if(p)groups[p].push(t);});
+  // moods per phase
+  const moodByPhase={men:{},fol:{},ovu:{},lut:{}};
+  Object.keys(LOG).forEach(k=>{const lg=LOG[k];const p=phaseForDi(Math.floor(Date.parse(k+'T00:00:00Z')/864e5));if(!p)return;
+    [lg.mood_pre,lg.mood_mid,lg.mood_post].forEach(m=>{if(m){m=cleanMood(m);moodByPhase[p][m]=(moodByPhase[p][m]||0)+1;}});});
+  const topMood=p=>{const e=Object.entries(moodByPhase[p]);if(!e.length)return '';e.sort((a,b)=>b[1]-a[1]);return e[0][0];};
+  const items=order.map(([k,label])=>aggItem(label,groups[k]));
+  const withData=items.filter(i=>i.n);
+  if(!withData.length){body.innerHTML='<div class="help" style="color:var(--faint)">No trades fall inside your tracked cycles yet.</div>';if(note)note.textContent='';return;}
+  const best=[...withData].sort((a,b)=>b.avgR-a.avgR)[0],worst=[...withData].sort((a,b)=>a.avgR-b.avgR)[0];
+  const total=order.reduce((s,[k])=>s+groups[k].length,0);
+  if(note)note.innerHTML=`Estimated from your logged periods (${CYC.avgCycle}-day cycle) across ${total} trades. Accuracy improves as you log more cycles.`;
+  const moodLine=order.map(([k,label])=>{const m=topMood(k);return m?`<span class="cmood"><span class="cmk">${label}</span>${esc(m)}</span>`:'';}).filter(Boolean).join('');
+  body.innerHTML=barRows(items,'avgR',true)
+    +`<div class="cyccall">Best: <b class="pos">${best.label}</b> (${(best.avgR>=0?'+':'')+best.avgR.toFixed(2)}R/trade) · Watch: <b class="neg">${worst.label}</b> (${(worst.avgR>=0?'+':'')+worst.avgR.toFixed(2)}R/trade)</div>`
+    +(moodLine?`<div class="cmoodrow"><span class="cmoodlbl">Top mood</span>${moodLine}</div>`:'');
+}
 
 function sbInit(){
   try{sb=window.supabase.createClient(SB_URL,SB_KEY);}catch(e){console.warn('Supabase init failed',e);renderAuth();return;}
@@ -466,7 +515,7 @@ async function saveLog(ds,patch,statEl){
   if(!error){recomputeCycle();renderCal();}
 }
 function recomputeCycle(){
-  CYC={phase:{},predicted:new Set(),nextStart:null,avgCycle:28};
+  CYC={phase:{},predicted:new Set(),nextStart:null,avgCycle:28,starts:[]};
   const days=Object.keys(LOG).filter(d=>LOG[d]&&LOG[d].period).sort();
   if(!days.length)return;
   const toDi=s=>Math.floor(Date.parse(s+'T00:00:00Z')/864e5);
@@ -483,6 +532,7 @@ function recomputeCycle(){
   const avgC=recent.length?Math.round(recent.reduce((a,b)=>a+b,0)/recent.length):28;
   const avgL=Math.max(1,Math.round(lens.reduce((a,b)=>a+b,0)/lens.length))||5;
   CYC.avgCycle=avgC;
+  CYC.starts=starts;
   CYC.nextStart=starts[starts.length-1]+avgC;
   const anchors=[...starts,CYC.nextStart];
   const M=5; // nominal menstrual length used for phase boundaries
@@ -877,6 +927,7 @@ function dayMeta(di){const trs=filteredTrades().filter(t=>t.di===di);const tz=jt
 function tint(sumR,n){if(!n)return'';const a=Math.min(.30,.07+Math.abs(sumR)*.025);return sumR>0?`background:rgba(66,210,154,${a})`:sumR<0?`background:rgba(242,89,107,${a})`:'';}
 function renderCal(){
   const cal=$('#cal');cal.innerHTML='';
+  try{renderCycleAnalysis();}catch(e){}
   const y=monthCursor.getFullYear(),mo=monthCursor.getMonth();
   $('#mLabel').textContent=monthCursor.toLocaleString('en-US',{month:'long',year:'numeric'});
   const first=new Date(y,mo,1);const start=new Date(first);start.setDate(1-((first.getDay()+6)%7));
