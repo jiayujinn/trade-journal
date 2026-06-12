@@ -333,7 +333,7 @@
   </div>
 
   <div class="panel" id="cycPanel">
-    <div class="seclabel"><span class="eyebrow">Cycle analysis</span></div>
+    <div class="seclabel"><span class="eyebrow">週期分析</span></div>
     <div class="help" id="cycNote" style="margin-bottom:12px"></div>
     <div id="cycBody"></div>
   </div>
@@ -456,27 +456,37 @@ function renderCycleAnalysis(){
   const body=$('#cycBody'),note=$('#cycNote');if(!body)return;
   if(!CYC.starts||!CYC.starts.length){
     if(note)note.textContent='';
-    body.innerHTML='<div class="help" style="color:var(--faint)">Log at least one period on the calendar to unlock cycle analysis.</div>';
+    body.innerHTML='<div class="help" style="color:var(--faint)">在月曆上標記至少一次生理期,即可解鎖週期分析。</div>';
     return;
   }
-  const order=[['men','Menstrual'],['fol','Follicular'],['ovu','Ovulation'],['lut','Luteal']];
+  const order=[['men','月經期'],['fol','濾泡期'],['ovu','排卵期'],['lut','黃體期']];
   const groups={men:[],fol:[],ovu:[],lut:[]};
   TRADES.forEach(t=>{const p=phaseForDi(t.di);if(p)groups[p].push(t);});
-  // moods per phase
   const moodByPhase={men:{},fol:{},ovu:{},lut:{}};
   Object.keys(LOG).forEach(k=>{const lg=LOG[k];const p=phaseForDi(Math.floor(Date.parse(k+'T00:00:00Z')/864e5));if(!p)return;
     [lg.mood_pre,lg.mood_mid,lg.mood_post].forEach(m=>{if(m){m=cleanMood(m);moodByPhase[p][m]=(moodByPhase[p][m]||0)+1;}});});
   const topMood=p=>{const e=Object.entries(moodByPhase[p]);if(!e.length)return '';e.sort((a,b)=>b[1]-a[1]);return e[0][0];};
-  const items=order.map(([k,label])=>aggItem(label,groups[k]));
-  const withData=items.filter(i=>i.n);
-  if(!withData.length){body.innerHTML='<div class="help" style="color:var(--faint)">No trades fall inside your tracked cycles yet.</div>';if(note)note.textContent='';return;}
-  const best=[...withData].sort((a,b)=>b.avgR-a.avgR)[0],worst=[...withData].sort((a,b)=>a.avgR-b.avgR)[0];
-  const total=order.reduce((s,[k])=>s+groups[k].length,0);
-  if(note)note.innerHTML=`Estimated from your logged periods (${CYC.avgCycle}-day cycle) across ${total} trades. Accuracy improves as you log more cycles.`;
+  const stats=order.map(([k,label])=>{const a=agg(groups[k]);return{k,label,n:a.n,winAll:a.winAll,avgR:a.avgR,sumR:a.sumR};});
+  const mAvg=Math.max(1e-9,...stats.map(s=>Math.abs(s.avgR)));
+  const total=stats.reduce((s,x)=>s+x.n,0);
+  if(note)note.innerHTML=`依你記錄的生理期推算(${CYC.avgCycle} 天週期),涵蓋 ${total} 筆交易。記錄越多週期,推算越準。`;
+  const bars=stats.map(s=>{
+    const v=s.avgR,pos=v>=0,pct=Math.min(50,Math.abs(v)/mAvg*50);
+    const win=(s.winAll==null?0:s.winAll*100).toFixed(0);
+    const valTxt=(v>=0?'+':'')+v.toFixed(2)+'R';
+    const meta=`${s.n} 筆 · 勝率 ${win}% · 總 ${(s.sumR>=0?'+':'')+s.sumR.toFixed(1)}R`;
+    const fill=`<div class="bzero"></div><div class="bfill ${pos?'p':'n'}" style="${pos?'left:50%':'right:50%'};width:${pct.toFixed(1)}%"></div>`;
+    return `<div class="bar"><div class="bl"><span class="bn">${s.label}</span><span class="bm">${meta}</span></div>`
+      +`<div class="btrack">${fill}</div><div class="bv ${pos?'pos':'neg'}">${valTxt}</div></div>`;
+  }).join('');
+  const withData=stats.filter(s=>s.n);
+  let call='';
+  if(withData.length){
+    const best=[...withData].sort((a,b)=>b.avgR-a.avgR)[0],worst=[...withData].sort((a,b)=>a.avgR-b.avgR)[0];
+    call=`<div class="cyccall">最佳:<b class="pos">${best.label}</b>(平均 ${(best.avgR>=0?'+':'')+best.avgR.toFixed(2)}R)· 注意:<b class="neg">${worst.label}</b>(平均 ${(worst.avgR>=0?'+':'')+worst.avgR.toFixed(2)}R)</div>`;
+  }
   const moodLine=order.map(([k,label])=>{const m=topMood(k);return m?`<span class="cmood"><span class="cmk">${label}</span>${esc(m)}</span>`:'';}).filter(Boolean).join('');
-  body.innerHTML=barRows(items,'avgR',true)
-    +`<div class="cyccall">Best: <b class="pos">${best.label}</b> (${(best.avgR>=0?'+':'')+best.avgR.toFixed(2)}R/trade) · Watch: <b class="neg">${worst.label}</b> (${(worst.avgR>=0?'+':'')+worst.avgR.toFixed(2)}R/trade)</div>`
-    +(moodLine?`<div class="cmoodrow"><span class="cmoodlbl">Top mood</span>${moodLine}</div>`:'');
+  body.innerHTML=bars+call+(moodLine?`<div class="cmoodrow"><span class="cmoodlbl">主要心情</span>${moodLine}</div>`:'');
 }
 
 function sbInit(){
