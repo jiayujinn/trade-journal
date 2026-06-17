@@ -998,6 +998,12 @@ function renderCal(){
 }
 
 // day modal
+function allMoods(){
+  const s=[...MOODS];
+  for(const k in LOG){const l=LOG[k];if(!l)continue;
+    ['mood_pre','mood_mid','mood_post'].forEach(f=>{if(l[f]){const m=cleanMood(l[f]);if(m&&!s.includes(m))s.push(m);}});}
+  return s;
+}
 function spark(trs){const tz=jtz();const sorted=[...trs].sort((a,b)=>a.tmin-b.tmin);
   let cum=0;const pts=sorted.map(t=>{cum+=t.r;return cum;});const all=[0,...pts];
   const W=800,H=140,pad=8;const mn=Math.min(...all),mx=Math.max(...all),rng=(mx-mn)||1;
@@ -1028,11 +1034,12 @@ function openDay(di,day){
       <td class="${rcls(t.r)}">${t.r>=0?'+':''}${t.r.toFixed(2)}R</td>
       <td class="icells">${ic}</td></tr>`;}).join('');
   const ds=lds(day);const lg=LOG[ds]||{};
+  const MO=allMoods();
   const phName=phaseName(ds);
   const moodSel=(field,label)=>{
     const cur=lg[field]?cleanMood(lg[field]):'';
-    let opts=`<option value="">—</option>`+MOODS.map(m=>`<option ${m===cur?'selected':''}>${esc(m)}</option>`).join('');
-    if(cur&&!MOODS.includes(cur))opts+=`<option selected>${esc(cur)}</option>`;
+    let opts=`<option value="">—</option>`+MO.map(m=>`<option ${m===cur?'selected':''}>${esc(m)}</option>`).join('');
+    if(cur&&!MO.includes(cur))opts+=`<option selected>${esc(cur)}</option>`;
     return `<label class="lgm">${label}<select data-f="${field}">${opts}</select></label>`;};
   const logHtml=`
     <div class="seclabel" style="margin-top:16px;display:flex;justify-content:space-between;align-items:center">
