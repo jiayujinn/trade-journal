@@ -504,8 +504,9 @@ function renderCycleAnalysis(){
     const best=[...withData].sort((a,b)=>b.avgR-a.avgR)[0],worst=[...withData].sort((a,b)=>a.avgR-b.avgR)[0];
     call=`<div class="cyccall">Best: <b class="pos">${best.label}</b> (avg ${(best.avgR>=0?'+':'')+best.avgR.toFixed(2)}R) · Watch: <b class="neg">${worst.label}</b> (avg ${(worst.avgR>=0?'+':'')+worst.avgR.toFixed(2)}R)</div>`;
   }
-  const moodLine=order.map(([k,label])=>{const m=topMood(k);return m?`<span class="cmood"><span class="cmk">${label}</span>${esc(m)}</span>`:'';}).filter(Boolean).join('');
-  body.innerHTML=bars+call+(moodLine?`<div class="cmoodrow"><span class="cmoodlbl">Top mood</span>${moodLine}</div>`:'');
+  const anyMood=order.some(([k])=>topMood(k));
+  const moodLine=order.map(([k,label])=>`<span class="cmood"><span class="cmk">${label}</span>${topMood(k)?esc(topMood(k)):'—'}</span>`).join('');
+  body.innerHTML=bars+call+(anyMood?`<div class="cmoodrow"><span class="cmoodlbl">Top mood</span>${moodLine}</div>`:'');
 }
 
 function sbInit(){
