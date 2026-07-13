@@ -203,6 +203,15 @@
   .cyc{position:absolute;inset:0;border-radius:9px;pointer-events:none}
   #calPanel{position:relative}
   .legend.lbar{margin-top:22px;align-items:center}
+  .calsub{margin-top:16px}
+  .csbtn{background:var(--panel2);border:1px solid var(--border2);color:var(--text);border-radius:10px;padding:9px 14px;font:inherit;font-size:12px;cursor:pointer}
+  .csbtn:hover{border-color:var(--accent)}
+  .csout{margin-top:12px;font-size:12px;color:var(--muted);line-height:1.6}
+  .csout a{color:var(--accent);text-decoration:none;font-weight:600}
+  .csrow{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:6px 0}
+  .csurl{flex:1;min-width:0;background:#0000;border:1px solid var(--border);border-radius:8px;padding:7px 9px;color:var(--faint);font-size:11px;font-family:ui-monospace,monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .cscopy{background:#0000;border:1px solid var(--border2);color:var(--text);border-radius:8px;padding:7px 11px;font:inherit;font-size:11px;cursor:pointer;white-space:nowrap}
+  .cscopy:hover{border-color:var(--accent)}
   .lfilters{display:flex;gap:8px;flex-shrink:0;margin-left:auto}
   .lfilters button{background:transparent;border:none;padding:0;font-size:15px;line-height:1;color:var(--muted);opacity:.4;cursor:pointer}
   .lfilters button:hover{border:none;color:var(--accent)}
@@ -336,6 +345,10 @@
       <span style="color:var(--blue)">▢ Today</span>
       <span>Tap a day for details</span>
       <div class="lfilters" id="lfilters"></div>
+    </div>
+    <div class="calsub">
+      <button id="calSubBtn" class="csbtn">📅 訂閱經期＋新聞行事曆</button>
+      <div id="calSubOut" class="csout" style="display:none"></div>
     </div>
   </div>
 
@@ -525,6 +538,32 @@ function renderAuth(){
     ?`<span class="help">${esc(SB_USER.email||'')}</span><button id="authBtn">Sign out</button>`
     :`<button id="authBtn" class="acc">Sign in</button>`;
   $('#authBtn').onclick=()=>{SB_USER?sb.auth.signOut():sb.auth.signInWithOAuth({provider:'google',options:{redirectTo:location.origin+location.pathname}});};
+}
+async function setupCalSub(){
+  const out=$('#calSubOut');if(!out)return;
+  out.style.display='block';
+  if(!sb||!SB_USER){out.innerHTML='請先用日曆面板右上角的 <b>Sign in</b> 登入,才能產生你的專屬訂閱網址。';return;}
+  out.innerHTML='<span class="help">產生中…</span>';
+  try{
+    let token=null;
+    const{data}=await sb.from('cal_sub').select('token').eq('user_id',SB_USER.id).maybeSingle();
+    if(data&&data.token)token=data.token;
+    else{
+      token=[...crypto.getRandomValues(new Uint8Array(16))].map(b=>b.toString(16).padStart(2,'0')).join('');
+      const{error}=await sb.from('cal_sub').upsert({user_id:SB_USER.id,token},{onConflict:'user_id'});
+      if(error)throw error;
+    }
+    const host=SB_URL.replace(/^https?:\/\//,'');
+    const https=`https://${host}/functions/v1/cycle-cal?token=${token}`;
+    const webcal=`webcal://${host}/functions/v1/cycle-cal?token=${token}`;
+    out.innerHTML=
+      `<div style="margin-bottom:4px"><b>iPhone</b> — 點這裡加入:</div>`
+      +`<div class="csrow"><a href="${webcal}">📅 加入 iPhone 日曆</a></div>`
+      +`<div style="margin:10px 0 2px"><b>Google 日曆</b> — 複製網址,到「其他日曆 → 以網址新增」貼上:</div>`
+      +`<div class="csrow"><span class="csurl">${https}</span><button class="cscopy" id="csCopy">複製</button></div>`
+      +`<div class="help" style="margin-top:8px">訂閱後自動更新:經期預測一變、有新美元新聞都會自動同步並提醒。此網址等同你的私人金鑰,請勿分享。</div>`;
+    const cc=$('#csCopy');if(cc)cc.onclick=async()=>{try{await navigator.clipboard.writeText(https);cc.textContent='已複製 ✓';setTimeout(()=>{cc.textContent='複製';},1500);}catch(e){}};
+  }catch(e){out.innerHTML='<span class="help">產生失敗:'+esc(e.message||String(e))+'</span>';}
 }
 async function loadLogs(){
   const{data,error}=await sb.from('daily_log').select('*');
@@ -813,7 +852,7 @@ function renderViol(){
   $('#violChart').innerHTML=barRows(Object.entries(tagMap).map(([k,l])=>aggItem(k,l)).sort((a,b)=>a.sumR-b.sumR));
 }
 let FACTORIDX=null;
-const FX_EXCLUDE=/p\/d|lesson|trail reason|^stop$|market result|trade result|^tags$/i;
+const FX_EXCLUDE=/p\/d|lesson|trail reason|^stop$|market result|trade result|^tags$|\bdate\b/i;
 const FX_ORDER=['day','week','month','session','swept','sweep confluences','dol','dol confluences','type','choch','retest fvg','entry','tf','dir','no risk','setup violation','execute violation'];
 const FX_GROUPS=[
   ['day','week','month','session'],
@@ -840,7 +879,7 @@ function buildFactorButtons(){
     let disp=name?(FX_RENAME[fxKey(name)]||name):'';
     if(isSize)disp='Size';else if(isReg)disp='Regime';else if(isES)disp='ES';else if(isADX)disp='ADX';
     cols.push({idx:c,name:name||disp,disp});}
-  if(FACTORIDX==null||!cols.some(o=>String(o.idx)===String(FACTORIDX))){
+  if(FACTORIDX==null||(FACTORIDX!=='day'&&FACTORIDX!=='week'&&FACTORIDX!=='month'&&!cols.some(o=>String(o.idx)===String(FACTORIDX)))){
     const def=cols.find(o=>/^session$/i.test(o.name))||cols.find(o=>/setup violation|^type$|entry|choch/i.test(o.name))||cols[0];
     FACTORIDX=def?def.idx:null;}
   const byKey={};cols.forEach(o=>byKey[fxKey(o.name)]=o);
@@ -848,12 +887,14 @@ function buildFactorButtons(){
   const btn=o=>`<button data-idx="${o.idx}"${String(o.idx)===String(FACTORIDX)?' class="on"':''}>${o.disp}</button>`;
   const grp=g=>{const items=g.map(k=>byKey[k]).filter(Boolean);items.forEach(o=>used.add(o.idx));return items.map(btn).join('');};
   const g0=grp(FX_GROUPS[0]),g1=grp(FX_GROUPS[1]),g2=grp(FX_GROUPS[2]),g3=grp(FX_GROUPS[3]);
+  const synBtn=(id,label)=>`<button data-idx="${id}"${FACTORIDX===id?' class="on"':''}>${label}</button>`;
+  const syn=synBtn('day','Day')+synBtn('week','Week')+synBtn('month','Month');
   let extra='',ex1='';
   const ec=cols.find(o=>o.disp==='ES');if(ec){used.add(ec.idx);ex1+=btn(ec);}
   const ac=cols.find(o=>o.disp==='ADX');if(ac){used.add(ac.idx);extra+=btn(ac);}
   const rc=cols.find(o=>o.disp==='Regime');if(rc){used.add(rc.idx);extra+=btn(rc);}
   const sc=cols.find(o=>o.disp==='Size');if(sc){used.add(sc.idx);extra+=btn(sc);}
-  let html=`<div class="pillpair"><div class="pgrp">${g0}</div><span class="psep">/</span><div class="pgrp">${g1}${ex1}</div></div>`
+  let html=`<div class="pillpair"><div class="pgrp">${g0}${syn}</div><span class="psep">/</span><div class="pgrp">${g1}${ex1}</div></div>`
     +`<div class="pillpair"><div class="pgrp">${g2}${extra}</div><span class="psep">/</span><div class="pgrp">${g3}</div></div>`;
   const rest=cols.filter(o=>!used.has(o.idx));
   if(rest.length)html+=`<div class="pgrp">${rest.map(btn).join('')}</div>`;
@@ -861,6 +902,12 @@ function buildFactorButtons(){
 }
 const FX_DAY={'星期一':'Monday','星期二':'Tuesday','星期三':'Wednesday','星期四':'Thursday','星期五':'Friday','星期六':'Saturday','星期日':'Sunday','星期天':'Sunday'};
 const FX_MONTH=['January','February','March','April','May','June','July','August','September','October','November','December'];
+const FX_WD=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+function fxSyn(kind,t){const d=new Date(t.di*864e5);
+  if(kind==='day')return FX_WD[d.getUTCDay()];
+  if(kind==='week')return 'Week '+Math.min(5,Math.ceil(d.getUTCDate()/7));
+  if(kind==='month')return FX_MONTH[d.getUTCMonth()];
+  return null;}
 function fxVal(col,v){
   if(v==null||v==='(blank)')return v;
   const c=String(col||'').toLowerCase().trim(),raw=String(v).trim(),k=raw.toLowerCase().replace(/\s+/g,'');
@@ -873,7 +920,19 @@ function fxVal(col,v){
   return v;
 }
 function renderFactor(){
-  if(FACTORIDX==null)return;const idx=+FACTORIDX,g={},cn=idx===18?'regime':(idx===21?'size':(idx===17?'adx':cellTxt(HEADERS[idx])));
+  if(FACTORIDX==null)return;
+  if(FACTORIDX==='day'||FACTORIDX==='week'||FACTORIDX==='month'){
+    const g={};filteredTrades().forEach(t=>{const lab=fxSyn(FACTORIDX,t);if(lab)(g[lab]=g[lab]||[]).push(t);});
+    const order=FACTORIDX==='day'
+      ?['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday']
+      :FACTORIDX==='week'
+      ?['Week 1','Week 2','Week 3','Week 4','Week 5']
+      :FX_MONTH;
+    const items=order.filter(k=>g[k]).map(k=>aggItem(k,g[k]));
+    $('#factorChart').innerHTML=barRows(items,METRIC,true);
+    return;
+  }
+  const idx=+FACTORIDX,g={},cn=idx===18?'regime':(idx===21?'size':(idx===17?'adx':cellTxt(HEADERS[idx])));
   filteredTrades().forEach(t=>{new Set(splitTags(t.row[idx])).forEach(tag=>{const lab=fxVal(cn,tag);(g[lab]=g[lab]||[]).push(t);});});
   $('#factorChart').innerHTML=barRows(Object.entries(g).map(([k,l])=>aggItem(k,l)));
 }
@@ -1239,6 +1298,7 @@ $('#reloadNews').onclick=async()=>{
 renderFilters();
 sbInit();
 loadAll();
+{const _cs=document.getElementById('calSubBtn');if(_cs)_cs.onclick=setupCalSub;}
 
 /* pull-to-refresh (mobile): pull down at top → page slides down, spinner revealed, release → reload */
 (function(){
